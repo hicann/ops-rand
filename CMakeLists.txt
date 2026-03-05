@@ -43,10 +43,13 @@ if(COMMAND add_version_info_targets)
 endif()
 
 # 添加 CANN 的 cmake 模块路径（用于 FindASC.cmake）
+if(UNIX)
+    set(SYSTEM_PREFIX "${CMAKE_SYSTEM_PROCESSOR}-linux")
+endif()
 if(DEFINED ENV{ASCEND_HOME_PATH})
-    list(APPEND CMAKE_MODULE_PATH "$ENV{ASCEND_HOME_PATH}/x86_64-linux/tikcpp/ascendc_kernel_cmake/asc_modules")
+    list(APPEND CMAKE_MODULE_PATH "$ENV{ASCEND_HOME_PATH}/${SYSTEM_PREFIX}/tikcpp/ascendc_kernel_cmake/asc_modules")
 elseif(DEFINED ASCEND_HOME_PATH)
-    list(APPEND CMAKE_MODULE_PATH "${ASCEND_HOME_PATH}/x86_64-linux/tikcpp/ascendc_kernel_cmake/asc_modules")
+    list(APPEND CMAKE_MODULE_PATH "${ASCEND_HOME_PATH}/${SYSTEM_PREFIX}/tikcpp/ascendc_kernel_cmake/asc_modules")
 endif()
 
 # 检查 cmake 配置文件是否存在

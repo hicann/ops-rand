@@ -98,10 +98,9 @@ for arg in "$@"; do
 done
 
 # 验证必要参数
-if [ -z "$SOC_VERSION" ] && [ "$ENABLE_PACKAGE" = "ON" ]; then
-    echo "Error: --soc is required for packaging"
-    echo "Example: bash build.sh --pkg --soc=ascend950"
-    exit 1
+if [ -z "$SOC_VERSION" ]; then
+    echo "Warning: --soc not specified, using default: ascend950"
+    SOC_VERSION="ascend950"
 fi
 
 echo "=========================================="
