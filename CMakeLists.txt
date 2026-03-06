@@ -1,13 +1,32 @@
+ # ----------------------------------------------------------------------------------------------------------
+# Copyright (c) 2026 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+# ----------------------------------------------------------------------------------------------------------
+
 cmake_minimum_required(VERSION 3.16.0)
 
-project(ops_rand VERSION 1.0.0 LANGUAGES CXX)
+# ========= 编译配置 =========
+set(OPS_RAND cann_ops_rand)
+
+find_package(ASC REQUIRED)
+
+project(${OPS_RAND} VERSION 1.0.0 LANGUAGES ASC CXX)
 
 # ========= 基本配置 =========
 set(SOC_VERSION "" CACHE STRING "Target SoC version (ascend950, ascend910b, etc.)")
 set(ASCEND_CANN_PACKAGE_PATH $ENV{ASCEND_HOME_PATH})
 set(RUN_MODE "npu" CACHE STRING "Run mode: npu")
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Release/Debug)")
-set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/build_out" CACHE STRING "Install path")
+
+# 测试相关配置（仅BUILD_TEST=ON时生效）
+set(BUILD_TEST OFF CACHE BOOL "Whether to build tests")
+set(COMPILED_OPS "" CACHE STRING "List of operators to test (comma-separated)")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
 
 # 打包相关选项
 option(ENABLE_PACKAGE "Enable package build" OFF)
@@ -57,30 +76,42 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/variables.cmake")
     include(cmake/variables.cmake)
 endif()
 
-# ========= 编译配置 =========
-set(ALL_SRC_FILES "")
-set(OPS_RAND ops_rand)
+# ========= 提前创建库 =========
+add_library(${OPS_RAND} SHARED)	 
 
-find_package(ASC REQUIRED)
-
-add_subdirectory(src)
-
-# 重新声明项目以支持 ASC 语言
-project(${OPS_RAND} LANGUAGES ASC CXX)
-
-add_library(${OPS_RAND} SHARED ${ALL_SRC_FILES})
 set_target_properties(${OPS_RAND} PROPERTIES
-    OUTPUT_NAME "cann_ops_rand"
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
 
-set_source_files_properties(${ALL_SRC_FILES} PROPERTIES LANGUAGE ASC)
+if(BUILD_TEST)
+    # 启用CTest
+    enable_testing()
+endif()
+
+# ========= 进入 src 目录 =========
+add_subdirectory(src)	 
+
+# ========= 检查库是否有源码 =========
+get_target_property(LIB_SOURCES ${OPS_RAND} SOURCES)
+if(NOT LIB_SOURCES OR LIB_SOURCES STREQUAL "")
+    message(FATAL_ERROR "No sources added to target")
+endif()
+
+# ========= 所有文件标记为 ASC =========
+set_source_files_properties( 
+    ${LIB_SOURCES} 
+    PROPERTIES LANGUAGE ASC 
+)
 
 target_include_directories(${OPS_RAND} PRIVATE
     $ENV{ASCEND_HOME_PATH}/pkg_inc/op_common/
     $ENV{ASCEND_HOME_PATH}/pkg_inc/base/
     $ENV{ASCEND_HOME_PATH}/pkg_inc/
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(${OPS_RAND} PRIVATE
+    tiling_api
 )
 
 # 使用 SoC 特定的编译选项（如果定义了）

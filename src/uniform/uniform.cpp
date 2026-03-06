@@ -19,6 +19,7 @@
 #include "platform/platform_info.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "log/log.h"
+#include "cann_ops_rand.h"
 
 
 using namespace StatelessRandom;

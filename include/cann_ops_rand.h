@@ -27,3 +27,5 @@ int aclrandSetGeneratorStream(aclrandGenerator_t generator, aclrtStream stream);
 
 /* Destroy the generator handle */
 int aclrandDestroyGenerator(aclrandGenerator_t generator);
+
+extern "C" aclError aclrandGenerateUniform(aclrandGenerator_t *generator, float *output, uint64_t n);
