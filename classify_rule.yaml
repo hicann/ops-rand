@@ -1,0 +1,11 @@
+ops_rand:
+  commiter:
+    "ops_rand_team"
+  team: "ops_rand"
+  src:
+    release:
+      - src
+    unrelease:
+  llt:
+    ut_check: true
+    st_check: false
