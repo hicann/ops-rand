@@ -16,10 +16,10 @@ include(${CMAKE_SOURCE_DIR}/cmake/func.cmake)
 # 查找src下的所有算子目录
 file(GLOB OP_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
 
-# 过滤有效算子目录（排除文件、common）
+# 过滤有效算子目录（排除文件、common、uniform）
 set(VALID_OP_DIRS "")
 foreach(DIR ${OP_DIRS})
-    if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${DIR} AND NOT ${DIR} STREQUAL "common")
+    if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${DIR} AND NOT ${DIR} STREQUAL "common" AND NOT ${DIR} STREQUAL "uniform")
         list(APPEND VALID_OP_DIRS ${DIR})
     endif()
 endforeach()
