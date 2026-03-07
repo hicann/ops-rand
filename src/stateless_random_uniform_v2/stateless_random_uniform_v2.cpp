@@ -52,7 +52,7 @@ extern "C" __global__ __aicore__ void stateless_random_uniform_v2(GM_ADDR y,  St
 
 }
 
-aclError aclrandStatelessRandomUniformV2(uint64_t seed, uint64_t offset, int32_t alg, float *output, uint64_t n)
+extern "C" aclError aclrandStatelessRandomUniformV2(uint64_t seed, uint64_t offset, int32_t alg, float *output, uint64_t n)
 {
     //todo：seed等参数校验
     if (output == nullptr || n == 0) {

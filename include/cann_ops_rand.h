@@ -11,24 +11,40 @@
 #pragma once
 #include <cstdint>
 
+/* 导出宏定义 */
+#if defined(_WIN32) || defined(__CYGWIN__)
+    #define ACLRAND_API __declspec(dllexport)
+#else
+    #define ACLRAND_API __attribute__((visibility("default")))
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct aclrandGenerator_st* aclrandGenerator_t; /* opaque handle */
 
 typedef enum {
-	ACLRAND_RNG_PSEUDO_DEFAULT = 0,
+    ACLRAND_RNG_PSEUDO_DEFAULT = 0,
 } aclrandRngType_t;
 
 /* Create a generator handle. Output parameter `generator` receives the opaque handle. */
-int aclrandCreateGenerator(aclrandGenerator_t *generator, aclrandRngType_t rng_type);
+ACLRAND_API int aclrandCreateGenerator(aclrandGenerator_t *generator, aclrandRngType_t rng_type);
 
 /* Set generator parameters */
-int aclrandSetGeneratorSeed(aclrandGenerator_t generator, uint64_t seed);
-int aclrandSetGeneratorOffset(aclrandGenerator_t generator, size_t offset);
-int aclrandSetGeneratorStream(aclrandGenerator_t generator, aclrtStream stream);
+ACLRAND_API int aclrandSetGeneratorSeed(aclrandGenerator_t generator, uint64_t seed);
+ACLRAND_API int aclrandSetGeneratorOffset(aclrandGenerator_t generator, size_t offset);
+ACLRAND_API int aclrandSetGeneratorStream(aclrandGenerator_t generator, aclrtStream stream);
 
 /* Destroy the generator handle */
-int aclrandDestroyGenerator(aclrandGenerator_t generator);
+ACLRAND_API int aclrandDestroyGenerator(aclrandGenerator_t generator);
 
-aclError aclrandGenerateUniform(aclrandGenerator_t *generator, float *output, uint64_t n);
+/* Generate uniform random numbers */
+ACLRAND_API aclError aclrandGenerateUniform(aclrandGenerator_t *generator, float *output, uint64_t n);
 
 /* Stateless random uniform distribution v2 */
-aclError aclrandStatelessRandomUniformV2(uint64_t seed, uint64_t offset, int32_t alg, float *output, uint64_t n);
+ACLRAND_API aclError aclrandStatelessRandomUniformV2(uint64_t seed, uint64_t offset, int32_t alg, float *output, uint64_t n);
+
+#ifdef __cplusplus
+}
+#endif
