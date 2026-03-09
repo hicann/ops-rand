@@ -121,7 +121,7 @@ if(DEFINED SOC_COMPILE_OPTIONS)
     )
 elseif(SOC_VERSION STREQUAL "ascend950" OR SOC_VERSION STREQUAL "ascend950dt_9595")
     target_compile_options(${OPS_RAND} PRIVATE
-        $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-3101>
+        $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-3510>
     )
 endif()
 

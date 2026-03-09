@@ -79,7 +79,7 @@ private:
     uint32_t key_[ALG_KEY_SIZE] = {0};
     uint32_t counter_[ALG_COUNTER_SIZE] = {0};
 
-    #if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 3101) || (__NPU_ARCH__ ==3510))
+    #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     static constexpr MicroAPI::CastTrait castTraitTf = {
         MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING};
     #endif
