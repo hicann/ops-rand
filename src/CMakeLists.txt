@@ -10,29 +10,46 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-# 引入注册函数
-include(${CMAKE_SOURCE_DIR}/cmake/func.cmake)
+##############################################################################
+# 创建 ops_rand 动态库
+##############################################################################
 
-# 查找src下的所有算子目录
-file(GLOB OP_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
+add_library(${OPS_RAND} SHARED)
 
-# 过滤有效算子目录（排除文件、common、uniform）
-set(VALID_OP_DIRS "")
-foreach(DIR ${OP_DIRS})
-    if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${DIR} AND NOT ${DIR} STREQUAL "common" AND NOT ${DIR} STREQUAL "uniform")
-        list(APPEND VALID_OP_DIRS ${DIR})
-    endif()
-endforeach()
+# 设置库的版本属性
+set_target_properties(${OPS_RAND} PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 1
+    OUTPUT_NAME "cann_ops_rand"  # 生成文件名：libcann_ops_rand.so
+)
 
-# 传递有效算子列表到根目录
-set(VALID_OP_DIRS ${VALID_OP_DIRS} PARENT_SCOPE)
+# 设置公共包含目录
+target_include_directories(${OPS_RAND} PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+    ${ASCEND_HOME_PATH}/include               # acl.h 等核心头文件
+    ${ASCEND_HOME_PATH}/pkg_inc/op_common/    # ASCEND 公共操作（kernel_operator.h 等）
+    ${ASCEND_HOME_PATH}/pkg_inc/base/         # ASCEND 基础类型
+    ${ASCEND_HOME_PATH}/pkg_inc/              # ASCEND 头文件
+)
 
-# 检查有效算子目录
-if(VALID_OP_DIRS STREQUAL "")
-    message(WARNING "No valid operator directories found in src/")
-else()
-    message(STATUS "Found valid operator directories: ${VALID_OP_DIRS}")
-endif()
+# 设置编译选项
+target_compile_options(${OPS_RAND} PRIVATE
+    $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${ASCEND_NPU_ARCH}>
+)
+
+# 链接 CANN tiling 平台库 (提供 GetCoreNumAiv 等函数)
+target_link_libraries(${OPS_RAND} PRIVATE
+    tiling_api
+)
+
+##############################################################################
+# 添加各算子子目录
+##############################################################################
+
+message(STATUS "==========================================")
+message(STATUS "Registering operators...")
+message(STATUS "==========================================")
 
 # 收集common目录源码
 if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/common)
@@ -43,61 +60,44 @@ if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/common)
     endif()
 endif()
 
-# 预处理COMPILED_OPS为算子列表
-set(TARGET_OP_LIST "")
-if(DEFINED COMPILED_OPS AND NOT COMPILED_OPS STREQUAL "")
-    if(COMPILED_OPS STREQUAL "all")
-        # 如果是"all"，编译所有算子
-        set(TARGET_OP_LIST ${VALID_OP_DIRS})
-        message(STATUS "COMPILED_OPS=all - building all operators: ${TARGET_OP_LIST}")
+foreach(OP ${BUILD_OPERATORS})
+    if(EXISTS ${CMAKE_SOURCE_DIR}/src/${OP}/CMakeLists.txt AND NOT ${OP} STREQUAL "uniform")
+        add_subdirectory(${OP})
+        message(STATUS "Added operator directory: ${OP}")
     else()
-        # 否则按逗号分割指定的算子列表
-        string(REPLACE "," ";" TARGET_OP_LIST ${COMPILED_OPS})
-        message(STATUS "Specified operators to build: ${TARGET_OP_LIST}")
-        
-        # 检查指定算子是否存在
-        foreach(TARGET_OP ${TARGET_OP_LIST})
-            # 去除可能的空格
-            string(STRIP ${TARGET_OP} TARGET_OP)
-            if(NOT "${TARGET_OP}" IN_LIST VALID_OP_DIRS)
-                message(FATAL_ERROR "Specified operator '${TARGET_OP}' does not exist. Valid operators: ${VALID_OP_DIRS}")
-            endif()
-        endforeach()
-    endif()
-else()
-    # 如果没有指定COMPILED_OPS，默认编译所有算子
-    set(TARGET_OP_LIST ${VALID_OP_DIRS})
-    message(STATUS "COMPILED_OPS not specified, building all: ${TARGET_OP_LIST}")
-endif()
-
-# 遍历所有有效算子目录，只编译指定的算子
-foreach(OP_DIR ${VALID_OP_DIRS})
-    # 使用list(FIND)检查当前算子是否在目标列表中
-    list(FIND TARGET_OP_LIST ${OP_DIR} OP_INDEX)
-    if(OP_INDEX GREATER -1)  # 找到了
-        # 编译算子核心代码
-        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${OP_DIR}/CMakeLists.txt)
-            add_subdirectory(${OP_DIR})
-            message(STATUS "Processed operator directory: ${OP_DIR}")
-            
-            # 仅BUILD_TEST=ON时处理测试目录
-            if(BUILD_TEST)
-                set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${OP_DIR}/tests)
-                if(IS_DIRECTORY ${TEST_DIR})
-                    message(STATUS "Processing test directory for operator: ${OP_DIR}")
-                    add_subdirectory(${TEST_DIR})
-                else()
-                    message(STATUS "No tests directory found for operator: ${OP_DIR}")
-                endif()
-            endif()
-        else()
-            message(WARNING "Operator directory ${OP_DIR} missing CMakeLists.txt, skipped")
-        endif()
-    else()
-        message(STATUS "Skipping non-target operator directory: ${OP_DIR}")
+        message(WARNING "Operator ${OP} missing CMakeLists.txt, skipping")
     endif()
 endforeach()
 
-# 输出库源码
-get_target_property(ALL_SRC ${OPS_RAND} SOURCES)
-message(STATUS "Sources added to cannops_rand library: ${ALL_SRC}")
+get_target_property(LIB_TARGET_SOURCE ${OPS_RAND} SOURCES)
+if (NOT LIB_TARGET_SOURCE OR LIB_TARGET_SOURCE STREQUAL "")
+    message(FATAL_ERROR "No sources added to cann_ops_rand target")
+endif()
+
+set_source_files_properties(
+    ${LIB_TARGET_SOURCE}
+    PROPERTIES LANGUAGE ASC
+)
+
+message(STATUS "==========================================")
+message(STATUS "Operator registration completed")
+message(STATUS "==========================================")
+message(STATUS "")
+
+##############################################################################
+# 安装规则
+##############################################################################
+
+# 安装库文件到 ops_rand/lib64/
+install(TARGETS ${OPS_RAND}
+    LIBRARY DESTINATION ${OPS_RAND_LIB_INSTALL_DIR}
+    RUNTIME DESTINATION bin
+)
+
+# 安装公共头文件到 ops_rand/include/
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+    DESTINATION ${OPS_RAND_INC_INSTALL_DIR}
+    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+)
+
+message(STATUS "Operator library 'ops_rand' configured successfully")

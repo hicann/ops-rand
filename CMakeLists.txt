@@ -76,66 +76,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/variables.cmake")
     include(cmake/variables.cmake)
 endif()
 
-# ========= 提前创建库 =========
-add_library(${OPS_RAND} SHARED)	 
-
-set_target_properties(${OPS_RAND} PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-)
-
-if(BUILD_TEST)
-    # 启用CTest
-    enable_testing()
-endif()
+# 环境初始化（封装）
+include(cmake/init_env.cmake)
+init_env()  # 发现算子
 
 # ========= 进入 src 目录 =========
-add_subdirectory(src)	 
+add_subdirectory(src)
 
-# ========= 检查库是否有源码 =========
-get_target_property(LIB_SOURCES ${OPS_RAND} SOURCES)
-if(NOT LIB_SOURCES OR LIB_SOURCES STREQUAL "")
-    message(FATAL_ERROR "No sources added to target")
+if(BUILD_TEST)
+    add_subdirectory(tests)
 endif()
-
-# ========= 所有文件标记为 ASC =========
-set_source_files_properties( 
-    ${LIB_SOURCES} 
-    PROPERTIES LANGUAGE ASC 
-)
-
-target_include_directories(${OPS_RAND} PRIVATE
-    $ENV{ASCEND_HOME_PATH}/pkg_inc/op_common/
-    $ENV{ASCEND_HOME_PATH}/pkg_inc/base/
-    $ENV{ASCEND_HOME_PATH}/pkg_inc/
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-target_link_libraries(${OPS_RAND} PRIVATE
-    tiling_api
-)
-
-# 使用 SoC 特定的编译选项（如果定义了）
-if(DEFINED SOC_COMPILE_OPTIONS)
-    target_compile_options(${OPS_RAND} PRIVATE
-        $<$<COMPILE_LANGUAGE:ASC>:${SOC_COMPILE_OPTIONS}>
-    )
-elseif(SOC_VERSION STREQUAL "ascend950" OR SOC_VERSION STREQUAL "ascend950dt_9595")
-    target_compile_options(${OPS_RAND} PRIVATE
-        $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-3510>
-    )
-endif()
-
-# ========= 安装规则 =========
-# 安装库文件
-install(TARGETS ${OPS_RAND}
-    LIBRARY DESTINATION ${OPS_RAND_LIB_INSTALL_DIR}
-)
-
-# 安装头文件
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
-    DESTINATION ${OPS_RAND_INC_INSTALL_DIR}
-    FILES_MATCHING PATTERN "*.h"
-)
 
 # ========= 打包配置 =========
 if(ENABLE_PACKAGE)

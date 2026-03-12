@@ -13,18 +13,22 @@ set -e
 
 BUILD_DIR=build
 BUILD_OUT_DIR=build_out
-BUILD_OP=""
+BUILD_OPERATORS="all"
 RUN_TEST=OFF
 ENABLE_PACKAGE=OFF
-SOC_VERSION="ascend950"
-THREAD_NUM=$(nproc)
+SOC_VERSION="Ascend950"
+THREAD_NUM=8
 BUILD_TYPE=Release
 VERBOSE=""
+CMAKE_OPTIONS=""
+TEST_TIMEOUT=300  # 默认测试超时时间（秒）
 
 # 获取脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+CORE_NUMS=$(cat /proc/cpuinfo | grep "processor" | wc -l)
 CANN_3RD_LIB_PATH="${SCRIPT_DIR}/third_party"
-SUPPORTED_SOCS=("ascend950")
+SUPPORTED_SOCS=("Ascend950")
 
 # 日志函数
 log_info() {
@@ -66,19 +70,26 @@ validate_soc_version() {
     return 1  # 不支持
 }
 
+# SoC 名称标准化函数（首字母大写，其余小写）
+normalize_soc_name() {
+    local soc="$1"
+    # 转换为小写，然后首字母大写
+    echo "${soc}" | sed 's/.*/\L&/; s/^./\U&/'
+}
+
 # ==========================
 # 帮助信息
 # ==========================
 show_help() {
     cat << EOF
-ops-rand Build Script
-
-Usage: bash build.sh [OPTIONS]
+Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  --op=NAME             Build specific operator (e.g., uniform)
+  --ops=NAME             Build specific operator (e.g., uniform)
   --soc=VERSION         Target SoC version $(printf "%s" "${SUPPORTED_SOCS}")
   --build-type=TYPE     Build type: Release (default), Debug 
+  --test-timeout=N      Test timeout in seconds (default: 300)
+  --make_clean          Clean build artifacts"
   --run                 Run operator test after build
   --pkg                 Build package (RUN file)
   -j[N]                 Parallel build threads (default: $(nproc))
@@ -86,69 +97,52 @@ Options:
   -h, --help            Show this help message
 
 Examples:
-  # Basic build
-  bash build.sh
-
-  # Build for Ascend 950
-  bash build.sh --soc=ascend950 -j16
-
-  # Build with package
-  bash build.sh --pkg --soc=ascend950
-
-  # Build specific operator
-  bash build.sh --op=uniform --run
+  $(basename "$0")                          # Build all operators (default 8 threads)
+  $(basename "$0") --ops=add                # Build only 'add' operator
+  $(basename "$0") --ops=add,sub            # Build 'add' and 'sub' operators
+  $(basename "$0") -j16                     # Build with 16 threads
+  $(basename "$0") --run                    # Build all and run tests
+  $(basename "$0") --ops=add --run          # Build 'add' and run tests
+  $(basename "$0") --pkg                    # Build package (default SoC: Ascend950)
+  $(basename "$0") --ops=add --pkg          # Build 'add' and package
+  $(basename "$0") --soc=Ascend950 --pkg    # Build package for Ascend950
+  $(basename "$0") --soc=ascend950 --pkg    # Build package (lowercase also works)
+  $(basename "$0") --test-timeout=600 --run # Run tests with 600s timeout
+  $(basename "$0") --make_clean             # Clean build artifacts
 EOF
     exit 0
 }
 
 run_tests() {
-    log_info "Running tests with ctest..."
-    
-    cd "$BUILD_DIR"
-    
-    # 构建ctest参数
-    local ctest_args="--output-on-failure"
-    
-    # 并行执行
-    local num_jobs=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
-    ctest_args+=" -j${num_jobs}"
-    log_info "Using ${num_jobs} parallel jobs"
-    
-    # 如果指定了具体的算子（不是all），添加过滤
-    if [ -n "$BUILD_OP" ] && [ "$BUILD_OP" != "all" ]; then
-        # 将逗号分隔的算子列表转换为正则表达式
-        IFS=',' read -ra OPS <<< "$BUILD_OP"
-        local regex=""
-        for op in "${OPS[@]}"; do
-            # 去除可能的空格
-            op=$(echo "$op" | xargs)
-            if [ -n "$regex" ]; then
-                regex="${regex}|${op}"
-            else
-                regex="${op}"
-            fi
-        done
-        # 添加测试过滤：匹配 test_算子名_example 格式
-        ctest_args+=" -R ^test_(${regex})_example$"
-        log_info "Test filter: ^test_(${regex})_example$"
-    else
-        log_info "Running all tests (no filter applied)"
+    log_info "Running tests (timeout: ${TEST_TIMEOUT}s)..."
+
+    cd "$BUILD_DIR" || {
+        log_error "Build directory not found: $BUILD_DIR"
+        exit 1
+    }
+
+    # 检查测试可执行文件
+    if [ ! -f "./tests/all_ops_test" ]; then
+        log_error "Test executable not found: ./tests/all_ops_test"
+        log_error "Please build the project first with: ./build.sh --run"
+        exit 1
     fi
-    
-    # 列出所有可用的测试（用于调试）
-    log_info "Available tests:"
-    ctest -N
-    
-    # 运行测试
-    log_info "Running ctest with args: $ctest_args"
-    ctest $ctest_args
-    
-    local test_result=$?
-    
+
+    log_info "Found test executable, starting..."
+
+    # 临时禁用 set -e，手动处理错误
+    set +e
+    timeout -k 1s ${TEST_TIMEOUT}s ./tests/all_ops_test 2>&1
+    test_result=$?
+    set -e
+
     cd "$SCRIPT_DIR"
-    
-    if [ $test_result -ne 0 ]; then
-        log_error "Some tests failed"
+
+    if [ $test_result -ge 124 ]; then
+        log_error "Test timeout (${TEST_TIMEOUT}s exceeded)"
+        exit 1
+    elif [ $test_result -ne 0 ]; then
+        log_error "Some tests failed (exit code: $test_result)"
         exit 1
     else
         log_success "All tests passed"
@@ -218,12 +212,20 @@ check_dependencies() {
 
 # 清理构建目录
 clean_build() {
-    log_info "Cleaning build directory..."
     if [ -d "$BUILD_DIR" ]; then
         rm -rf "$BUILD_DIR"
-        log_success "Build directory cleaned"
+        log_success "build directory cleaned"
     else
-        log_warning "Build directory does not exist, nothing to clean"
+        log_info "build directory does not exist, nothing to clean"
+    fi
+}
+
+clean_build_out() {
+    if [ -d "${BUILD_OUT_DIR}" ]; then
+        rm -rf ${BUILD_OUT_DIR}/*
+        log_success "build_out directory cleaned"
+    else
+        log_info "build_out directory does not exist, nothing to clean"
     fi
 }
 
@@ -231,8 +233,8 @@ clean_build() {
 parse_arguments() {
     for arg in "$@"; do
         case $arg in
-            --op=*)
-                BUILD_OP="${arg#*=}"
+            --ops=*)
+                BUILD_OPERATORS="${arg#*=}"
                 ;;
             --run)
                 RUN_TEST=ON
@@ -241,7 +243,9 @@ parse_arguments() {
                 ENABLE_PACKAGE=ON
                 ;;
             --soc=*)
-                SOC_VERSION="${arg#*=}"
+                # 提取 SoC 型号并标准化（支持小写输入）
+                SOC_INPUT="${arg#*=}"
+                SOC_VERSION=$(normalize_soc_name "${SOC_INPUT}")
                 ;;
             -j*)
                 THREAD_NUM="${arg#-j}"
@@ -255,6 +259,15 @@ parse_arguments() {
             --help|-h)
                 show_help
                 ;;
+            --test-timeout=*)
+                # 提取测试超时时间
+                TEST_TIMEOUT="${arg#*=}"
+                ;;
+            --make_clean)
+                clean_build
+                clean_build_out
+                exit 0
+                ;;
             *)
                 echo "Unknown option: $arg"
                 echo "Use --help for usage information"
@@ -263,11 +276,11 @@ parse_arguments() {
         esac
     done
 }
-
-# 主函数
-main() {
-    #检查参数
-    parse_arguments "$@"
+assemble_cmake_args() {
+    if [ "$THREAD_NUM" -gt "$CORE_NUMS" ]; then
+        log_info "compile thread num:$THREAD_NUM over core num:$CORE_NUMS, adjust to core num"
+        THREAD_NUM=$CORE_NUMS
+    fi
 
     # 芯片版本验证
     if [ -n "$SOC_VERSION" ]; then
@@ -280,16 +293,6 @@ main() {
         fi
     fi
 
-    echo "=========================================="
-    echo "Build Configuration:"
-    echo "  BUILD_OP       = ${BUILD_OP:-all}"
-    echo "  RUN_TEST       = ${RUN_TEST}"
-    echo "  ENABLE_PACKAGE = ${ENABLE_PACKAGE}"
-    echo "  SOC_VERSION    = ${SOC_VERSION:-not set}"
-    echo "  BUILD_TYPE     = ${BUILD_TYPE}"
-    echo "  THREAD_NUM     = ${THREAD_NUM}"
-    echo "=========================================="
-
     # 验证必要参数
     if [ -z "$SOC_VERSION" ] && [ "$ENABLE_PACKAGE" = "ON" ]; then
         echo "Error: --soc is required for packaging"
@@ -297,21 +300,10 @@ main() {
         exit 1
     fi
 
-    # 依赖检查
-    check_dependencies
-
-    clean_build
-
-    CMAKE_OPTIONS=""
-
-    if [ -n "$BUILD_OP" ]; then
-        # 如果指定了 --op，直接使用指定的值
-        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCOMPILED_OPS=${BUILD_OP}"
-        log_info "Building specified operator(s): ${BUILD_OP}"
+    if [ "$BUILD_OPERATORS" != "all" ]; then
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DENABLED_OPERATORS=${BUILD_OPERATORS}"
+        log_info "Building specified operator(s): ${BUILD_OPERATORS}"
     else
-        # 如果没有指定 --op，设置 COMPILED_OPS=all 表示全量编译
-        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCOMPILED_OPS=all"
-        BUILD_OP="all"
         log_info "No operators specified, building all operators"
     fi
 
@@ -322,11 +314,23 @@ main() {
 
     CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${RUN_TEST}"
     CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCMAKE_BUILD_TYPE=${BUILD_TYPE}"
-    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DASCEND_HOME_PATH=${ASCEND_HOME_PATH}"
     CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSOC_VERSION=${SOC_VERSION}"
+    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DASCEND_HOME_PATH=${ASCEND_HOME_PATH}"
     CMAKE_OPTIONS="${CMAKE_OPTIONS} -DCANN_3RD_LIB_PATH=${CANN_3RD_LIB_PATH}"
+}
 
+# 主函数
+main() {
+    #检查参数
+    parse_arguments "$@"
+
+    # 依赖检查
+    check_dependencies
+
+    assemble_cmake_args
     echo "CMake Options: ${CMAKE_OPTIONS}"
+
+    clean_build
 
     # 执行 CMake 配置
     cmake -B ${BUILD_DIR} ${CMAKE_OPTIONS}
