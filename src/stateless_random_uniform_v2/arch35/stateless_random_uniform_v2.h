@@ -20,10 +20,10 @@ struct StatelessRandomUniformV2TilingData {
     uint32_t blockTilingSize;
     uint32_t tailBlockTilingSize;
     uint32_t ubTilingSize;
-    //todo:生成随机数的算法
     uint32_t alg;
     uint32_t key[2];
     uint32_t counter[4];
+    uint32_t tilingKey;
 };
 
 template <typename T>
@@ -79,10 +79,10 @@ private:
     uint32_t key_[ALG_KEY_SIZE] = {0};
     uint32_t counter_[ALG_COUNTER_SIZE] = {0};
 
-    #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     static constexpr MicroAPI::CastTrait castTraitTf = {
         MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING};
-    #endif
+#endif
 };
 
 template <typename T>
@@ -98,7 +98,6 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Init(
     } else {
         currBlockTilingSize_ = blockTilingSize_;
     }
-
     // ubTiling size less than block tiling size
     if (currBlockTilingSize_ < ubTilingSize_) {
         ubTilingSize_ = currBlockTilingSize_;

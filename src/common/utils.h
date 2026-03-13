@@ -12,11 +12,12 @@
  * \file utils.h
  * \brief
  */
- 
- #pragma once
 
- 
- template <typename T>
+#pragma once
+
+#define TILING_KEY_IS(key) (tilingData.tilingKey == (key))
+
+template <typename T>
 __aicore__ inline T CeilDiv(const T a, const T b)
 {
     if (b == 0) {

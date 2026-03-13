@@ -20,7 +20,6 @@
 #include "log/log.h"
 #include "acl/acl.h"
 
-
 using namespace StatelessRandom;
 
 namespace {
@@ -41,36 +40,64 @@ inline T1 CeilDiv(const T1 a, const T2 b)
     return (a + b - 1) / b;
 }
 
-
-extern "C" __global__ __aicore__ void stateless_random_uniform_v2(GM_ADDR y,  StatelessRandomUniformV2TilingData tilingData)
+extern "C" __global__ __aicore__ void stateless_random_uniform_v2(
+    GM_ADDR y, StatelessRandomUniformV2TilingData tilingData)
 {
     TPipe pipe;
-    //todo：添加tiling_key处理逻辑
-    StatelessRandomUniformV2<float> op;
-    op.Init(y, &tilingData, &pipe);
-    op.Process();   
-
+    if (TILING_KEY_IS(FLOAT_TILING_KEY)) {
+        StatelessRandomUniformV2<float> op;
+        op.Init(y, &tilingData, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(FLOAT16_TILING_KEY)) {
+        StatelessRandomUniformV2<half> op;
+        op.Init(y, &tilingData, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(BFLOAT16_TILING_KEY)) {
+        StatelessRandomUniformV2<bfloat16_t> op;
+        op.Init(y, &tilingData, &pipe);
+        op.Process();
+    }
 }
 
-extern "C" aclError aclrandStatelessRandomUniformV2(uint64_t seed, uint64_t offset, int32_t alg, float *output, uint64_t n)
+extern "C" aclError aclrandStatelessRandomUniformV2(
+    uint64_t seed, uint64_t offset, int32_t alg, void* output, uint64_t n, aclDataType dtype)
 {
-    //todo：seed等参数校验
+    // Parameter validation
     if (output == nullptr || n == 0) {
         return ACL_ERROR;
     }
 
-    auto outputDtypeSize = sizeof(float);
+    // Set parameters based on data type
+    uint32_t outputDtypeSize;
+    uint32_t tilingKey;
+
+    switch (dtype) {
+        case ACL_FLOAT:
+            outputDtypeSize = sizeof(float);
+            tilingKey = FLOAT_TILING_KEY;
+            break;
+        case ACL_FLOAT16:
+            outputDtypeSize = sizeof(uint16_t);
+            tilingKey = FLOAT16_TILING_KEY;
+            break;
+        case ACL_BF16:
+            outputDtypeSize = sizeof(uint16_t);
+            tilingKey = BFLOAT16_TILING_KEY;
+            break;
+        default:
+            return ACL_ERROR_INVALID_PARAM;
+    }
 
     size_t outputSize_ = static_cast<size_t>(n) * outputDtypeSize;
 
-     // Allocate device memory for output
-     void *dev_out = nullptr;
-     if (aclrtMalloc(&dev_out, outputSize_, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
-         return ACL_ERROR;
-     }
+    // Allocate device memory for output
+    void* dev_out = nullptr;
+    if (aclrtMalloc(&dev_out, outputSize_, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
+        return ACL_ERROR;
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendCManager::GetInstance();
-  
-    StatelessRandomUniformV2TilingData *tilingData = new StatelessRandomUniformV2TilingData();
+
+    StatelessRandomUniformV2TilingData* tilingData = new StatelessRandomUniformV2TilingData();
     auto coreNum_ = ascendcPlatform->GetCoreNumAiv();
     auto coreAlignFactor = CORE_ALIGN_SIZE / outputDtypeSize;
     auto blockFactor = CeilDiv(outputSize_, coreNum_);
@@ -93,9 +120,9 @@ extern "C" aclError aclrandStatelessRandomUniformV2(uint64_t seed, uint64_t offs
     tilingData->counter[3] = 0;
     tilingData->key[0] = static_cast<uint32_t>(seed);
     tilingData->key[1] = static_cast<uint32_t>(seed >> 32);
-    
-    // Call host-side launcher (must be implemented to actually launch kernel)
-    stateless_random_uniform_v2<<<tilingData->blockNum, nullptr, 0>>>((__gm__ uint8_t *)dev_out, *tilingData);
+    tilingData->tilingKey = tilingKey;
+
+    stateless_random_uniform_v2<<<tilingData->blockNum, nullptr, 0>>>((__gm__ uint8_t*)dev_out, *tilingData);
 
     // Copy device output back to host
     if (aclrtMemcpy(output, outputSize_, dev_out, outputSize_, ACL_MEMCPY_DEVICE_TO_HOST) != ACL_SUCCESS) {
