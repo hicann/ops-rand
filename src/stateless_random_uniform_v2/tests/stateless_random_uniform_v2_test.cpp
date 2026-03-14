@@ -17,7 +17,7 @@
 #include <algorithm>
 
 // 测试基本随机数生成
-void test_basic_random(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void test_basic_random(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_basic_random");
 
@@ -46,7 +46,7 @@ void test_basic_random(aclrtStream stream, OpsTensorTest::TestStats& stats)
 }
 
 // 测试空指针检查
-void test_null_pointer(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void test_null_pointer(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_null_pointer");
 
@@ -62,7 +62,7 @@ void test_null_pointer(aclrtStream stream, OpsTensorTest::TestStats& stats)
 }
 
 // 测试无效大小
-void test_invalid_size(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void test_invalid_size(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_invalid_size");
 
@@ -79,7 +79,7 @@ void test_invalid_size(aclrtStream stream, OpsTensorTest::TestStats& stats)
 }
 
 // 测试可复现性
-void test_reproducibility(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void test_reproducibility(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_reproducibility");
 
@@ -104,7 +104,7 @@ void test_reproducibility(aclrtStream stream, OpsTensorTest::TestStats& stats)
 }
 
 // 测试不同种子
-void test_different_seeds(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void test_different_seeds(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_different_seeds");
 
@@ -135,7 +135,7 @@ void test_different_seeds(aclrtStream stream, OpsTensorTest::TestStats& stats)
 }
 
 // 测试不同偏移
-void test_different_offsets(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void test_different_offsets(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_different_offsets");
 
@@ -166,7 +166,7 @@ void test_different_offsets(aclrtStream stream, OpsTensorTest::TestStats& stats)
 }
 
 // 测试 float16 类型
-void test_float16_type(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void test_float16_type(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_float16_type");
 
@@ -194,7 +194,7 @@ void test_float16_type(aclrtStream stream, OpsTensorTest::TestStats& stats)
 }
 
 // 测试 bfloat16 类型
-void test_bfloat16_type(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void test_bfloat16_type(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_bfloat16_type");
 
@@ -223,7 +223,7 @@ void test_bfloat16_type(aclrtStream stream, OpsTensorTest::TestStats& stats)
 
 // 导出函数
 namespace StatelessRandomUniformV2Test {
-void run_all_tests(aclrtStream stream, OpsTensorTest::TestStats& stats)
+void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     test_basic_random(stream, stats);
     test_null_pointer(stream, stats);

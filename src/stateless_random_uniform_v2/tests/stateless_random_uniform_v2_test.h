@@ -14,5 +14,5 @@
 #include "test_common.h"
 
 namespace StatelessRandomUniformV2Test {
-    void run_all_tests(aclrtStream stream, OpsTensorTest::TestStats& stats);
+    void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats);
 }

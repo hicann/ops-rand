@@ -15,7 +15,7 @@
 
 #include "test_common.h"
 
-namespace OpsTensorTest {
+namespace OpsRandTest {
 
 // 全局测试统计定义
 TestStats g_global_stats;
@@ -56,4 +56,4 @@ void ACLManager::finalize(aclrtStream& stream) {
     aclFinalize();
 }
 
-} // namespace OpsTensorTest
+} // namespace OpsRandTest

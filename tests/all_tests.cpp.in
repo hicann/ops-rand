@@ -23,7 +23,7 @@ aclrtStream g_stream = nullptr;
 
 int main() {
     // 初始化 ACL
-    if (OpsTensorTest::ACLManager::init(g_stream) != 0) {
+    if (OpsRandTest::ACLManager::init(g_stream) != 0) {
         std::cerr << "Failed to initialize ACL" << std::endl;
         return -1;
     }
@@ -34,9 +34,9 @@ int main() {
     std::cout << std::endl;
 
     // 自动遍历所有注册的测试
-    for (const auto& entry : OpsTensorTest::TestRegistry::get_tests()) {
+    for (const auto& entry : OpsRandTest::TestRegistry::get_tests()) {
         TEST_PRINT_HEADER(entry.name);
-        OpsTensorTest::TestStats op_stats;
+        OpsRandTest::TestStats op_stats;
         entry.func(g_stream, op_stats);
         TEST_PRINT_RESULT_NAME(entry.name, op_stats);
     }
@@ -45,10 +45,10 @@ int main() {
     TEST_PRINT_GLOBAL_RESULT();
 
     // 清理 ACL
-    OpsTensorTest::ACLManager::finalize(g_stream);
+    OpsRandTest::ACLManager::finalize(g_stream);
 
     // 返回结果
-    if (OpsTensorTest::g_global_stats.failed > 0) {
+    if (OpsRandTest::g_global_stats.failed > 0) {
         std::cout << "测试失败!" << std::endl;
         return 1;
     }

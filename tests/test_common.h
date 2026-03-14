@@ -13,8 +13,8 @@
  * @brief 公共测试框架 - 提供测试统计、断言宏和 ACL 初始化功能
  */
 
-#ifndef CANN_OPS_TENSOR_TEST_COMMON_H
-#define CANN_OPS_TENSOR_TEST_COMMON_H
+#ifndef CANN_OPS_RAND_TEST_COMMON_H
+#define CANN_OPS_RAND_TEST_COMMON_H
 
 #include <iostream>
 #include <string>
@@ -22,7 +22,7 @@
 #include <cstdlib>
 #include "acl/acl.h"
 
-namespace OpsTensorTest {
+namespace OpsRandTest {
 
 // 测试结果统计
 struct TestStats {
@@ -52,8 +52,8 @@ extern TestStats g_global_stats;
     do { \
         (local_stats).total++; \
         (local_stats).passed++; \
-        OpsTensorTest::g_global_stats.total++; \
-        OpsTensorTest::g_global_stats.passed++; \
+        OpsRandTest::g_global_stats.total++; \
+        OpsRandTest::g_global_stats.passed++; \
         std::cout << "[PASS] " << test_name << std::endl; \
     } while(0)
 
@@ -63,8 +63,8 @@ extern TestStats g_global_stats;
         if (!(condition)) { \
             (local_stats).total++; \
             (local_stats).failed++; \
-            OpsTensorTest::g_global_stats.total++; \
-            OpsTensorTest::g_global_stats.failed++; \
+            OpsRandTest::g_global_stats.total++; \
+            OpsRandTest::g_global_stats.failed++; \
             std::cerr << "  [ERROR] " << error_msg << std::endl; \
             std::exit(1); \
         } \
@@ -134,7 +134,7 @@ extern TestStats g_global_stats;
         std::cout << "========================================" << std::endl; \
         std::cout << "       全局测试结果" << std::endl; \
         std::cout << "========================================" << std::endl; \
-        OpsTensorTest::g_global_stats.print("全部算子"); \
+        OpsRandTest::g_global_stats.print("全部算子"); \
         std::cout << "========================================" << std::endl; \
     } while(0)
 
@@ -168,17 +168,17 @@ struct TestRegistry {
 // 自动注册宏
 #define REGISTER_OP_TEST(op_name) \
     namespace op_name##Test { \
-        void run_all_tests(aclrtStream, OpsTensorTest::TestStats&); \
+        void run_all_tests(aclrtStream, OpsRandTest::TestStats&); \
         namespace { \
             struct Registrar { \
                 Registrar() { \
-                    OpsTensorTest::TestRegistry::register_test(#op_name, run_all_tests); \
+                    OpsRandTest::TestRegistry::register_test(#op_name, run_all_tests); \
                 } \
             }; \
             static Registrar registrar; \
         } \
     }
 
-} // namespace OpsTensorTest
+} // namespace OpsRandTest
 
-#endif // CANN_OPS_TENSOR_TEST_COMMON_H
+#endif // CANN_OPS_RAND_TEST_COMMON_H
