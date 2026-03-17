@@ -51,12 +51,12 @@ message(STATUS "==========================================")
 message(STATUS "Registering operators...")
 message(STATUS "==========================================")
 
-# 收集common目录源码
-if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/common)
-    file(GLOB COMMON_SRC ${CMAKE_CURRENT_SOURCE_DIR}/common/*.cpp)
-    if(COMMON_SRC)
-        target_sources(${OPS_RAND} PRIVATE ${COMMON_SRC})
-        message(STATUS "Collected common sources: ${COMMON_SRC}")
+# 收集 api 目录源码
+if(IS_DIRECTORY ${CMAKE_SOURCE_DIR}/api)
+    file(GLOB API_SRC ${CMAKE_SOURCE_DIR}/api/*.cpp)
+    if(API_SRC)
+        target_sources(${OPS_RAND} PRIVATE ${API_SRC})
+        message(STATUS "Collected api sources: ${API_SRC}")
     endif()
 endif()
 

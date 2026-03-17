@@ -9,6 +9,7 @@
  */
 
 #include "generator.h"
+#include "cann_ops_rand.h"
 #include <new>
 
 
@@ -66,4 +67,21 @@ int aclrandDestroyGenerator(aclrandGenerator_t generator) {
 	opsrand::Generator *g = reinterpret_cast<opsrand::Generator*>(generator);
 	delete g;
 	return ACL_SUCCESS;
+}
+
+int aclrandGenerateUniform(aclrandGenerator_t *generator, float *output, uint64_t n) {
+	if (generator == nullptr || *generator == nullptr || output == nullptr || n == 0) {
+		return ACL_ERROR;
+	}
+
+	opsrand::Generator *g = reinterpret_cast<opsrand::Generator*>(*generator);
+
+	return aclrandStatelessRandomUniformV2(
+		g->seed,
+		g->offset,
+		1,  // alg
+		output,
+		n,
+		ACL_FLOAT
+	);
 }

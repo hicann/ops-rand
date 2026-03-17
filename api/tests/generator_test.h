@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * This program is free software; you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
@@ -8,40 +8,15 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/*!
- * \file generator.h
- * \brief
+/**
+ * @file generator_test.h
+ * @brief Generator API 测试函数声明
  */
 
 #pragma once
 
-/* Use plain C types in header for C-only API */
-#include <stdint.h>
-#include <stddef.h>
-#include <acl/acl_rt.h>
-#include "cann_ops_rand.h"
+#include "test_common.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-namespace opsrand {
-
-	struct Generator {
-		uint64_t seed;
-		int rng_type;
-		size_t offset;
-		aclrtStream stream_id;
-
-	};
+namespace GeneratorTest {
+    void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats);
 }
-
-
-
-
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-

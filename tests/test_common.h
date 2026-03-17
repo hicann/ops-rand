@@ -173,7 +173,7 @@ struct TestRegistry {
     }
 };
 
-// 自动注册宏
+// 自动注册宏（算子测试）
 #define REGISTER_OP_TEST(op_name) \
     namespace op_name##Test { \
         void run_all_tests(aclrtStream, OpsRandTest::TestStats&); \
@@ -181,6 +181,20 @@ struct TestRegistry {
             struct Registrar { \
                 Registrar() { \
                     OpsRandTest::TestRegistry::register_test(#op_name, run_all_tests); \
+                } \
+            }; \
+            static Registrar registrar; \
+        } \
+    }
+
+// 自动注册宏（API 测试）
+#define REGISTER_API_TEST(api_name) \
+    namespace api_name##Test { \
+        void run_all_tests(aclrtStream, OpsRandTest::TestStats&); \
+        namespace { \
+            struct Registrar { \
+                Registrar() { \
+                    OpsRandTest::TestRegistry::register_test(#api_name, run_all_tests); \
                 } \
             }; \
             static Registrar registrar; \
