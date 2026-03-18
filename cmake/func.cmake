@@ -140,7 +140,7 @@ function(register_operator)
         endif()
         list(APPEND absolute_sources ${abs_src})
         
-        # ========= 关键修改：直接添加源码到库（无需全局变量传递）=========
+        # ========= 直接添加源码到库=========
         target_sources(${OPS_RAND} PRIVATE ${abs_src})
     endforeach()
 

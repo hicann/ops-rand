@@ -87,6 +87,18 @@ if(BUILD_TEST)
     add_subdirectory(tests)
 endif()
 
+# ========= 安装规则 =========
+# 安装库文件
+install(TARGETS ${OPS_RAND}
+    LIBRARY DESTINATION ${OPS_RAND_LIB_INSTALL_DIR}
+)
+
+# 安装头文件
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+    DESTINATION ${OPS_RAND_INC_INSTALL_DIR}
+    FILES_MATCHING PATTERN "*.h"
+)
+
 # ========= 打包配置 =========
 if(ENABLE_PACKAGE)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/package.cmake")

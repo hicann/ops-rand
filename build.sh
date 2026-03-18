@@ -30,6 +30,13 @@ CORE_NUMS=$(cat /proc/cpuinfo | grep "processor" | wc -l)
 CANN_3RD_LIB_PATH="${SCRIPT_DIR}/third_party"
 SUPPORTED_SOCS=("Ascend950")
 
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
 # 日志函数
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -74,7 +81,7 @@ validate_soc_version() {
 normalize_soc_name() {
     local soc="$1"
     # 转换为小写，然后首字母大写
-    echo "${soc}" | sed 's/.*/\L&/; s/^./\U&/'
+    echo "${soc}" | sed 's/.*/\L&/; s/^./\U&/; s/.$/\U&/'
 }
 
 # ==========================
@@ -222,7 +229,7 @@ clean_build() {
 
 clean_build_out() {
     if [ -d "${BUILD_OUT_DIR}" ]; then
-        rm -rf ${BUILD_OUT_DIR}/*
+        rm -rf "${BUILD_OUT_DIR}"
         log_success "build_out directory cleaned"
     else
         log_info "build_out directory does not exist, nothing to clean"
@@ -231,37 +238,65 @@ clean_build_out() {
 
 # 解析命令行参数
 parse_arguments() {
-    for arg in "$@"; do
-        case $arg in
+    while [[ $# -gt 0 ]]; do
+        case $1 in
             --ops=*)
-                BUILD_OPERATORS="${arg#*=}"
+                BUILD_OPERATORS="${1#*=}"
+                shift
                 ;;
             --run)
                 RUN_TEST=ON
+                shift
                 ;;
             --pkg)
                 ENABLE_PACKAGE=ON
+                shift
                 ;;
             --soc=*)
                 # 提取 SoC 型号并标准化（支持小写输入）
-                SOC_INPUT="${arg#*=}"
+                SOC_INPUT="${1#*=}"
                 SOC_VERSION=$(normalize_soc_name "${SOC_INPUT}")
+                shift
                 ;;
             -j*)
-                THREAD_NUM="${arg#-j}"
+                # 提取线程数
+                if [[ "$1" == "-j" ]]; then
+                    # -j N 的形式
+                    if [[ -z "$2" ]]; then
+                        log_error "Missing thread number after -j"
+                        exit 1
+                    fi
+                    if [[ "$2" == -* ]]; then
+                        log_error "Invalid thread number: $2 (did you mean -j$N?)"
+                        exit 1
+                    fi
+                    THREAD_NUM="$2"
+                    shift 2
+                else
+                    # -jN 的形式
+                    THREAD_NUM="${1#-j}"
+                    shift
+                fi
+                if [[ ! "$THREAD_NUM" =~ ^[0-9]+$ ]]; then
+                    log_error "non-integer argument:$THREAD_NUM"
+                    exit 1
+                fi
                 ;;
             --build-type=*)
-                BUILD_TYPE="${arg#*=}"
+                BUILD_TYPE="${1#*=}"
+                shift
                 ;;
             -v|--verbose)
                 VERBOSE="-v"
+                shift
                 ;;
             --help|-h)
                 show_help
                 ;;
             --test-timeout=*)
                 # 提取测试超时时间
-                TEST_TIMEOUT="${arg#*=}"
+                TEST_TIMEOUT="${1#*=}"
+                shift
                 ;;
             --make_clean)
                 clean_build
@@ -269,8 +304,8 @@ parse_arguments() {
                 exit 0
                 ;;
             *)
-                echo "Unknown option: $arg"
-                echo "Use --help for usage information"
+                log_error "Unknown option: $1"
+                log_info "Use --help for usage information"
                 exit 1
                 ;;
         esac
@@ -280,6 +315,13 @@ assemble_cmake_args() {
     if [ "$THREAD_NUM" -gt "$CORE_NUMS" ]; then
         log_info "compile thread num:$THREAD_NUM over core num:$CORE_NUMS, adjust to core num"
         THREAD_NUM=$CORE_NUMS
+    fi
+
+    if [[ -n "${BUILD_TYPE}" ]]; then
+        if [[ "${BUILD_TYPE}" != "Release" && "${BUILD_TYPE}" != "Debug" ]]; then
+        log_error "--build-type only support Release/Debug Mode"
+        exit 1
+        fi
     fi
 
     # 芯片版本验证
@@ -324,11 +366,11 @@ main() {
     #检查参数
     parse_arguments "$@"
 
-    # 依赖检查
-    check_dependencies
-
     assemble_cmake_args
     echo "CMake Options: ${CMAKE_OPTIONS}"
+
+    # 依赖检查
+    check_dependencies
 
     clean_build
 
@@ -336,6 +378,7 @@ main() {
     cmake -B ${BUILD_DIR} ${CMAKE_OPTIONS}
 
     # 执行构建
+    log_info "Compiling with ${THREAD_NUM} threads..."
     cmake --build ${BUILD_DIR} -j${THREAD_NUM} ${VERBOSE}
 
     # 运行测试（如果指定）

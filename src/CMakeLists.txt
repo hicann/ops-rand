@@ -84,20 +84,4 @@ message(STATUS "Operator registration completed")
 message(STATUS "==========================================")
 message(STATUS "")
 
-##############################################################################
-# 安装规则
-##############################################################################
-
-# 安装库文件到 ops_rand/lib64/
-install(TARGETS ${OPS_RAND}
-    LIBRARY DESTINATION ${OPS_RAND_LIB_INSTALL_DIR}
-    RUNTIME DESTINATION bin
-)
-
-# 安装公共头文件到 ops_rand/include/
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
-    DESTINATION ${OPS_RAND_INC_INSTALL_DIR}
-    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
-)
-
 message(STATUS "Operator library 'ops_rand' configured successfully")
