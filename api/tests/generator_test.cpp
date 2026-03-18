@@ -10,138 +10,138 @@
 
 /**
  * @file generator_test.cpp
- * @brief Generator API 单元测试
+ * @brief Generator API unit tests
  */
 
 #include "generator_test.h"
 #include "cann_ops_rand.h"
 #include <iostream>
 
-// 测试创建 generator
+// Test create generator
 void test_create_generator(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_create_generator");
 
     aclrandGenerator_t generator;
-    aclError ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandCreateGenerator failed");
+    aclrandStatus_t ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
     TEST_ASSERT(stats, generator != nullptr, "generator should not be null");
 
     ret = aclrandDestroyGenerator(generator);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandDestroyGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
 
     TEST_CASE_PASS(stats, "test_create_generator");
 }
 
-// 测试空指针创建
+// Test create with null pointer
 void test_create_null_generator(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_create_null_generator");
 
-    aclError ret = aclrandCreateGenerator(nullptr, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_ERROR, "aclrandCreateGenerator with null should fail");
+    aclrandStatus_t ret = aclrandCreateGenerator(nullptr, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret != ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator with null should fail");
 
     TEST_CASE_PASS(stats, "test_create_null_generator");
 }
 
-// 测试设置 seed
+// Test set seed
 void test_set_seed(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_set_seed");
 
     aclrandGenerator_t generator;
-    aclError ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandCreateGenerator failed");
+    aclrandStatus_t ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
 
     ret = aclrandSetGeneratorSeed(generator, 12345);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorSeed failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed failed");
 
     ret = aclrandSetGeneratorSeed(nullptr, 12345);
-    TEST_ASSERT(stats, ret == ACL_ERROR, "aclrandSetGeneratorSeed with null should fail");
+    TEST_ASSERT(stats, ret != ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed with null should fail");
 
     ret = aclrandDestroyGenerator(generator);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandDestroyGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
 
     TEST_CASE_PASS(stats, "test_set_seed");
 }
 
-// 测试设置 offset
+// Test set offset
 void test_set_offset(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_set_offset");
 
     aclrandGenerator_t generator;
-    aclError ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandCreateGenerator failed");
+    aclrandStatus_t ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
 
     ret = aclrandSetGeneratorOffset(generator, 100);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorOffset failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset failed");
 
     ret = aclrandSetGeneratorOffset(nullptr, 100);
-    TEST_ASSERT(stats, ret == ACL_ERROR, "aclrandSetGeneratorOffset with null should fail");
+    TEST_ASSERT(stats, ret != ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset with null should fail");
 
     ret = aclrandDestroyGenerator(generator);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandDestroyGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
 
     TEST_CASE_PASS(stats, "test_set_offset");
 }
 
-// 测试设置 stream
+// Test set stream
 void test_set_stream(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_set_stream");
 
     aclrandGenerator_t generator;
-    aclError ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandCreateGenerator failed");
+    aclrandStatus_t ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
 
     ret = aclrandSetGeneratorStream(generator, stream);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorStream failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorStream failed");
 
     ret = aclrandSetGeneratorStream(nullptr, stream);
-    TEST_ASSERT(stats, ret == ACL_ERROR, "aclrandSetGeneratorStream with null generator should fail");
+    TEST_ASSERT(stats, ret != ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorStream with null generator should fail");
 
     ret = aclrandDestroyGenerator(generator);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandDestroyGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
 
     TEST_CASE_PASS(stats, "test_set_stream");
 }
 
-// 测试销毁空 generator
+// Test destroy null generator
 void test_destroy_null_generator(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_destroy_null_generator");
 
-    aclError ret = aclrandDestroyGenerator(nullptr);
-    TEST_ASSERT(stats, ret == ACL_ERROR, "aclrandDestroyGenerator with null should fail");
+    aclrandStatus_t ret = aclrandDestroyGenerator(nullptr);
+    TEST_ASSERT(stats, ret != ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator with null should fail");
 
     TEST_CASE_PASS(stats, "test_destroy_null_generator");
 }
 
-// 测试 aclrandGenerateUniform 基本功能
+// Test aclrandGenerateUniform basic functionality
 void test_generate_uniform(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_generate_uniform");
 
-    // 创建 generator
+    // Create generator
     aclrandGenerator_t generator;
-    aclError ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandCreateGenerator failed");
+    aclrandStatus_t ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
 
-    // 设置参数
+    // Set parameters
     ret = aclrandSetGeneratorSeed(generator, 12345);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorSeed failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed failed");
 
     ret = aclrandSetGeneratorOffset(generator, 0);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorOffset failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset failed");
 
-    // 生成随机数
+    // Generate random numbers
     const uint64_t n = 100;
     float output[n];
-    ret = aclrandGenerateUniform(&generator, output, n);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandGenerateUniform failed");
+    aclrandStatus_t status = aclrandGenerateUniform(generator, output, n);
+    TEST_ASSERT(stats, status == ACLRAND_STATUS_SUCCESS, "aclrandGenerateUniform failed");
 
-    // 验证所有值都在 [0, 1) 范围内
+    // Verify all values are in [0, 1) range
     bool all_in_range = true;
     for (uint64_t i = 0; i < n; ++i) {
         if (output[i] < 0.0f || output[i] >= 1.0f) {
@@ -152,41 +152,41 @@ void test_generate_uniform(aclrtStream stream, OpsRandTest::TestStats& stats)
     TEST_ASSERT(stats, all_in_range, "values not in [0, 1) range");
 
     ret = aclrandDestroyGenerator(generator);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandDestroyGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
 
     TEST_CASE_PASS(stats, "test_generate_uniform");
 }
 
-// 测试 aclrandGenerateUniform 空指针参数
+// Test aclrandGenerateUniform with null parameters
 void test_generate_uniform_null(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_generate_uniform_null");
 
     aclrandGenerator_t generator;
-    aclError ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandCreateGenerator failed");
+    aclrandStatus_t ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
 
     float output[10];
 
-    // 空 generator 指针
-    ret = aclrandGenerateUniform(nullptr, output, 10);
-    TEST_ASSERT(stats, ret == ACL_ERROR, "aclrandGenerateUniform with null generator ptr should fail");
+    // Null generator pointer
+    aclrandStatus_t status = aclrandGenerateUniform(nullptr, output, 10);
+    TEST_ASSERT(stats, status != ACLRAND_STATUS_SUCCESS, "aclrandGenerateUniform with null generator ptr should fail");
 
-    // 空 output
-    ret = aclrandGenerateUniform(&generator, nullptr, 10);
-    TEST_ASSERT(stats, ret == ACL_ERROR, "aclrandGenerateUniform with null output should fail");
+    // Null output
+    status = aclrandGenerateUniform(generator, nullptr, 10);
+    TEST_ASSERT(stats, status != ACLRAND_STATUS_SUCCESS, "aclrandGenerateUniform with null output should fail");
 
-    // 零大小
-    ret = aclrandGenerateUniform(&generator, output, 0);
-    TEST_ASSERT(stats, ret == ACL_ERROR, "aclrandGenerateUniform with zero n should fail");
+    // Zero size
+    status = aclrandGenerateUniform(generator, output, 0);
+    TEST_ASSERT(stats, status != ACLRAND_STATUS_SUCCESS, "aclrandGenerateUniform with zero n should fail");
 
     ret = aclrandDestroyGenerator(generator);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandDestroyGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
 
     TEST_CASE_PASS(stats, "test_generate_uniform_null");
 }
 
-// 测试 aclrandGenerateUniform 可复现性
+// Test aclrandGenerateUniform reproducibility
 void test_generate_uniform_reproducibility(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     TEST_CASE_BEGIN("test_generate_uniform_reproducibility");
@@ -195,39 +195,94 @@ void test_generate_uniform_reproducibility(aclrtStream stream, OpsRandTest::Test
     float output1[n];
     float output2[n];
 
-    // 第一次生成
+    // First generation
     aclrandGenerator_t gen1;
-    aclError ret = aclrandCreateGenerator(&gen1, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandCreateGenerator failed");
+    aclrandStatus_t ret = aclrandCreateGenerator(&gen1, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
     ret = aclrandSetGeneratorSeed(gen1, 99999);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorSeed failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed failed");
     ret = aclrandSetGeneratorOffset(gen1, 0);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorOffset failed");
-    ret = aclrandGenerateUniform(&gen1, output1, n);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandGenerateUniform failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset failed");
+    aclrandStatus_t status = aclrandGenerateUniform(gen1, output1, n);
+    TEST_ASSERT(stats, status == ACLRAND_STATUS_SUCCESS, "aclrandGenerateUniform failed");
     ret = aclrandDestroyGenerator(gen1);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandDestroyGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
 
-    // 第二次生成（相同参数）
+    // Second generation (same parameters)
     aclrandGenerator_t gen2;
     ret = aclrandCreateGenerator(&gen2, ACLRAND_RNG_PSEUDO_DEFAULT);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandCreateGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
     ret = aclrandSetGeneratorSeed(gen2, 99999);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorSeed failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed failed");
     ret = aclrandSetGeneratorOffset(gen2, 0);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandSetGeneratorOffset failed");
-    ret = aclrandGenerateUniform(&gen2, output2, n);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandGenerateUniform failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset failed");
+    status = aclrandGenerateUniform(gen2, output2, n);
+    TEST_ASSERT(stats, status == ACLRAND_STATUS_SUCCESS, "aclrandGenerateUniform failed");
     ret = aclrandDestroyGenerator(gen2);
-    TEST_ASSERT(stats, ret == ACL_SUCCESS, "aclrandDestroyGenerator failed");
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
 
-    // 验证两次结果相同
+    // Verify both results are identical
     TEST_ASSERT_ARRAY_EQ(stats, output1, output2, n, "results not reproducible");
 
     TEST_CASE_PASS(stats, "test_generate_uniform_reproducibility");
 }
 
-// 导出函数
+// Test unsupported RNG types
+void test_generate_uniform_unsupported_rng(aclrtStream stream, OpsRandTest::TestStats& stats)
+{
+    TEST_CASE_BEGIN("test_generate_uniform_unsupported_rng");
+
+    float output[10];
+    aclrandStatus_t status;
+
+    // Test XORWOW (not supported)
+    {
+        aclrandGenerator_t gen;
+        aclrandStatus_t ret = aclrandCreateGenerator(&gen, ACLRAND_RNG_PSEUDO_XORWOW);
+        TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
+        status = aclrandGenerateUniform(gen, output, 10);
+        TEST_ASSERT(stats, status == ACLRAND_STATUS_TYPE_ERROR,
+                    "XORWOW should return TYPE_NOT_SUPPORTED");
+        aclrandDestroyGenerator(gen);
+    }
+
+    // Test MRG32K3A (not supported)
+    {
+        aclrandGenerator_t gen;
+        aclrandStatus_t ret = aclrandCreateGenerator(&gen, ACLRAND_RNG_PSEUDO_MRG32K3A);
+        TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
+        status = aclrandGenerateUniform(gen, output, 10);
+        TEST_ASSERT(stats, status == ACLRAND_STATUS_TYPE_ERROR,
+                    "MRG32K3A should return TYPE_NOT_SUPPORTED");
+        aclrandDestroyGenerator(gen);
+    }
+
+    // Test quasi-random SOBOL32 (not supported)
+    {
+        aclrandGenerator_t gen;
+        aclrandStatus_t ret = aclrandCreateGenerator(&gen, ACLRAND_RNG_QUASI_SOBOL32);
+        TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
+        status = aclrandGenerateUniform(gen, output, 10);
+        TEST_ASSERT(stats, status == ACLRAND_STATUS_TYPE_ERROR,
+                    "SOBOL32 should return TYPE_NOT_SUPPORTED");
+        aclrandDestroyGenerator(gen);
+    }
+
+    // Test PHILOX (supported)
+    {
+        aclrandGenerator_t gen;
+        aclrandStatus_t ret = aclrandCreateGenerator(&gen, ACLRAND_RNG_PSEUDO_PHILOX4_32_10);
+        TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
+        status = aclrandGenerateUniform(gen, output, 10);
+        TEST_ASSERT(stats, status == ACLRAND_STATUS_SUCCESS,
+                    "PHILOX4_32_10 should succeed");
+        aclrandDestroyGenerator(gen);
+    }
+
+    TEST_CASE_PASS(stats, "test_generate_uniform_unsupported_rng");
+}
+
+// Export function
 namespace GeneratorTest {
 void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
@@ -240,8 +295,9 @@ void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
     test_generate_uniform(stream, stats);
     test_generate_uniform_null(stream, stats);
     test_generate_uniform_reproducibility(stream, stats);
+    test_generate_uniform_unsupported_rng(stream, stats);
 }
 } // namespace GeneratorTest
 
-// 自动注册到测试框架
+// Auto-register to test framework
 REGISTER_API_TEST(Generator)

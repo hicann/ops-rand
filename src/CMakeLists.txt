@@ -61,7 +61,7 @@ if(IS_DIRECTORY ${CMAKE_SOURCE_DIR}/api)
 endif()
 
 foreach(OP ${BUILD_OPERATORS})
-    if(EXISTS ${CMAKE_SOURCE_DIR}/src/${OP}/CMakeLists.txt AND NOT ${OP} STREQUAL "uniform")
+    if(EXISTS ${CMAKE_SOURCE_DIR}/src/${OP}/CMakeLists.txt)
         add_subdirectory(${OP})
         message(STATUS "Added operator directory: ${OP}")
     else()

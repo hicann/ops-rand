@@ -10,6 +10,7 @@
  */
 
 #include "cann_ops_rand.h"
+#include "internal/ops_impl.h"
 #include "stateless_random_uniform_v2_test.h"
 #include <iostream>
 #include <vector>
