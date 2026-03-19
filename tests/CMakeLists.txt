@@ -17,8 +17,8 @@ if(BUILD_TEST)
         endif()
     endforeach()
 
-    # 添加 api 目录的测试头文件
-    if(EXISTS "${CMAKE_SOURCE_DIR}/api/tests/generator_test.h")
+    # 添加 lib 目录的测试头文件
+    if(EXISTS "${CMAKE_SOURCE_DIR}/lib/tests/generator_test.h")
         list(APPEND TEST_HEADERS "tests/generator_test.h")
     endif()
 
@@ -46,9 +46,9 @@ if(BUILD_TEST)
         endif()
     endforeach()
 
-    # 添加 api 目录的测试源文件
-    if(EXISTS "${CMAKE_SOURCE_DIR}/api/tests/generator_test.cpp")
-        list(APPEND TEST_SOURCES "${CMAKE_SOURCE_DIR}/api/tests/generator_test.cpp")
+    # 添加 lib 目录的测试源文件
+    if(EXISTS "${CMAKE_SOURCE_DIR}/lib/tests/generator_test.cpp")
+        list(APPEND TEST_SOURCES "${CMAKE_SOURCE_DIR}/lib/tests/generator_test.cpp")
     endif()
 
     # 创建测试可执行文件
@@ -62,7 +62,7 @@ if(BUILD_TEST)
     target_include_directories(all_ops_test PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/api
+        ${CMAKE_SOURCE_DIR}/lib
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${ASCEND_HOME_PATH}/include
     )

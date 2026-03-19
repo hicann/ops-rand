@@ -53,13 +53,13 @@ bash build.sh --run
 
 ```bash
 # 编译指定算子
-bash build.sh --op=uniform
+bash build.sh --op=stateless_random_uniform_v2
 
-# 编译多个算子
-bash build.sh --op=uniform,stateless_random_uniform_v2
+# 编译多个算子（示例）
+bash build.sh --op=stateless_random_uniform_v2,other_op
 
 # 编译指定算子并运行测试
-bash build.sh --op=uniform --run
+bash build.sh --op=stateless_random_uniform_v2 --run
 ```
 
 ### 生成安装包
@@ -86,7 +86,7 @@ bash build.sh -v --run
 
 ```bash
 # 编译指定算子、Debug模式、运行测试、详细输出
-bash build.sh --op=uniform --build-type=Debug --run -v
+bash build.sh --op=stateless_random_uniform_v2 --build-type=Debug --run -v
 
 # 多线程编译安装包
 bash build.sh --pkg --soc=ascend950 -j16 -v

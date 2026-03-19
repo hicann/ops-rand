@@ -68,10 +68,10 @@
 bash build.sh --run
 
 # 编译指定算子并运行测试
-bash build.sh --op=uniform --run
+bash build.sh --op=stateless_random_uniform_v2 --run
 ```
 
-执行测试后会打印执行结果，以uniform算子为例，结果如下：
+执行测试后会打印执行结果，以stateless_random_uniform_v2算子为例，结果如下：
 
 ```
 100% tests passed, 0 tests failed
@@ -81,7 +81,7 @@ bash build.sh --op=uniform --run
 
 | 选项 | 说明 | 示例 |
 | :--- | :--- | :--- |
-| `--op=NAME` | 编译指定算子 | `--op=uniform` |
+| `--op=NAME` | 编译指定算子 | `--op=stateless_random_uniform_v2` |
 | `--soc=VERSION` | 目标SoC版本 | `--soc=ascend950` |
 | `--build-type=TYPE` | 构建类型（Release/Debug） | `--build-type=Debug` |
 | `--run` | 编译后运行测试 | `--run` |
@@ -102,7 +102,7 @@ bash build.sh --soc=ascend950
 bash build.sh --run
 
 # 编译指定算子并运行测试
-bash build.sh --op=uniform --run
+bash build.sh --op=stateless_random_uniform_v2 --run
 
 # 编译生成安装包
 bash build.sh --pkg --soc=ascend950

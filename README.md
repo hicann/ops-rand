@@ -41,15 +41,11 @@ ops-rand是[CANN](https://hiascend.com/software/cann) （Compute Architecture fo
 ├── docs                           # 项目文档介绍
 ├── examples                       # 端到端算子开发和调用示例
 ├── include                        # 头文件目录
+├── lib                            # Generator API 实现代码
 ├── src                            # 源码目录
-│   ├── uniform                    # uniform分布随机数算子
-│   │   ├── CMakeLists.txt         # 算子编译配置文件
-│   │   ├── arch_22                # Ascend910B/C特有算子代码
-│   │   ├── arch_35                # Ascend950特有算子代码
-│   │   └── README.md              # 算子介绍文档
-│   ├── ...                        # 算子公共代码
+│   ├── stateless_random_uniform_v2 # 无状态均匀分布随机数算子
+│   ├── internal                   # 内部实现头文件
 │   └── CMakeLists.txt             # 算子编译配置文件
-├── ...
 ├── scripts                        # 脚本目录，包含自定义算子、kernel构建相关配置文件
 ├── tests                          # 测试工程目录
 ├── CMakeLists.txt

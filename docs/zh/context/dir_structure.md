@@ -8,8 +8,7 @@
 │   └── ...
 ├── common                                              # 项目公共头文件和公共代码
 │   ├── CMakeLists.txt
-│   ├── inc                                             # 公共头文件目录
-│   └── src                                             # 公共代码目录
+│   └── inc                                             # 公共头文件目录
 ├── docs                                                # 项目相关文档目录
 │   ├── README.md                                       # 文档目录索引
 │   └── zh                                              # 中文文档目录
@@ -19,21 +18,19 @@
 │       ├── develop                                     # 算子开发文档目录
 │       └── debug                                       # 调试调优文档目录
 ├── include                                             # 头文件目录
-│   └── ...
+│   └── cann_ops_rand.h                                 # ops-rand API 头文件
+├── lib                                                 # Generator API 实现目录
+│   ├── generator.cpp                                   # Generator API 实现
+│   ├── generator.h                                     # Generator 内部头文件
+│   └── tests                                           # API 测试用例目录
 ├── scripts                                             # 脚本目录，包含自定义算子、Kernel构建相关配置文件
 │   └── ...
 ├── src                                                 # 源码目录
 │   ├── CMakeLists.txt                                  # 算子编译入口
 │   ├── common                                          # 算子公共代码
 │   │   └── ...
-│   ├── uniform                                         # uniform分布随机数算子
-│   │   ├── CMakeLists.txt                              # 算子编译配置文件
-│   │   ├── uniform.cpp                                 # 算子Kernel入口文件
-│   │   ├── arch35                                      # Ascend950特有算子代码
-│   │   │   └── uniform.h                               # 算子Kernel实现头文件
-│   │   └── tests                                       # 算子测试用例目录
-│   │       ├── CMakeLists.txt
-│   │       └── test_uniform_example.cpp
+│   ├── internal                                        # 内部实现头文件
+│   │   └── ops_impl.h                                  # 算子声明头文件
 │   └── stateless_random_uniform_v2                    # 无状态均匀分布随机数算子
 │       └── ...
 ├── tests                                               # 项目级测试目录（可选）
@@ -60,9 +57,10 @@
 | 目录/文件 | 说明 |
 | :--- | :--- |
 | `src/` | 算子源码目录，包含所有算子的实现代码 |
-| `src/uniform/` | uniform算子目录，实现均匀分布随机数生成 |
 | `src/stateless_random_uniform_v2/` | 无状态均匀分布随机数算子目录 |
 | `src/common/` | 算子公共代码，包含通用工具函数和数据结构 |
+| `src/internal/` | 内部实现头文件，封装算子声明 |
+| `lib/` | Generator API 实现目录 |
 | `include/` | API头文件目录 |
 | `cmake/` | CMake编译配置文件 |
 
@@ -88,7 +86,7 @@
 
 ## 算子目录结构
 
-每个算子目录（如`src/uniform/`）的典型结构如下：
+每个算子目录（如`src/stateless_random_uniform_v2/`）的典型结构如下：
 
 ```
 ${op_name}/                              # 算子名的小写下划线形式

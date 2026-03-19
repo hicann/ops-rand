@@ -13,7 +13,7 @@
  * @brief Internal operator implementations (not exposed in public API)
  *
  * This header declares internal operator functions that are used by the
- * public API layer (api/generator.cpp) but are not exposed to end users.
+ * public API layer (lib/generator.cpp) but are not exposed to end users.
  */
 
 #pragma once

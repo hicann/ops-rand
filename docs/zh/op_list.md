@@ -8,27 +8,9 @@
 
 | 算子分类 | 算子目录 | op_kernel | op_host | op_api | op_graph | 算子执行硬件单元 | 说明 |
 | :--- | :--- | :---: | :---: | :---: | :---: | :--- | :--- |
-| rand | [uniform](#uniform) | √ | - | - | - | AI Core | 生成均匀分布的随机数，支持FP32、FP16数据类型。 |
 | rand | [stateless_random_uniform_v2](#stateless_random_uniform_v2) | √ | - | - | - | AI Core | 生成无状态的均匀分布随机数，给定种子可复现结果。 |
 
 ## 算子详细说明
-
-### uniform
-
-生成服从均匀分布的随机数，输出值在指定范围内均匀分布。
-
-**目录位置**：`src/uniform/`
-
-**支持的芯片**：Ascend 950
-
-**支持的数据类型**：FP32、FP16
-
-**输入**：
-- shape：输出张量的形状
-- dtype：输出张量的数据类型
-
-**输出**：
-- output：填充了随机数的张量，值范围 [from, to)
 
 ### stateless_random_uniform_v2
 
@@ -60,7 +42,6 @@
 
 ops-rand是[CANN](https://hiascend.com/software/cann)（Compute Architecture for Neural Networks）算子库中提供的**随机数生成库**，主要提供以下功能：
 
-- **uniform**：生成服从均匀分布的随机数，范围可指定为[0, 1)或自定义区间。
 - **stateless_random_uniform_v2**：无状态版本的均匀分布随机数生成器，通过指定种子(seed)确保结果可复现。
 
 ## 支持的芯片版本
