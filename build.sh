@@ -99,6 +99,7 @@ Options:
   --make_clean          Clean build artifacts"
   --run                 Run operator test after build
   --pkg                 Build package (RUN file)
+  --cann_3rd_lib_path=PATH  Third-party lib path (default: ./third_party)
   -j[N]                 Parallel build threads (default: $(nproc))
   -v, --verbose         Verbose output
   -h, --help            Show this help message
@@ -302,6 +303,10 @@ parse_arguments() {
                 clean_build
                 clean_build_out
                 exit 0
+                ;;
+            --cann_3rd_lib_path=*)
+                CANN_3RD_LIB_PATH="$(realpath ${1#*=})"
+                shift
                 ;;
             *)
                 log_error "Unknown option: $1"
