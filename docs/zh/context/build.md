@@ -22,7 +22,7 @@ bash build.sh [OPTIONS]
 
 | 参数 | 说明 | 默认值 |
 | :--- | :--- | :--- |
-| `--op=NAME` | 编译指定算子，多个算子用逗号分隔 | all（编译所有算子） |
+| `--ops=NAME` | 编译指定算子，多个算子用逗号分隔 | all（编译所有算子） |
 | `--soc=VERSION` | 目标SoC版本 | ascend950 |
 | `--build-type=TYPE` | 构建类型：Release（发布版）、Debug（调试版） | Release |
 | `--run` | 编译后运行测试用例 | OFF |
@@ -53,13 +53,13 @@ bash build.sh --run
 
 ```bash
 # 编译指定算子
-bash build.sh --op=stateless_random_uniform_v2
+bash build.sh --ops=stateless_random_uniform_v2
 
 # 编译多个算子（示例）
-bash build.sh --op=stateless_random_uniform_v2,other_op
+bash build.sh --ops=stateless_random_uniform_v2,other_op
 
 # 编译指定算子并运行测试
-bash build.sh --op=stateless_random_uniform_v2 --run
+bash build.sh --ops=stateless_random_uniform_v2 --run
 ```
 
 ### 生成安装包
@@ -86,7 +86,7 @@ bash build.sh -v --run
 
 ```bash
 # 编译指定算子、Debug模式、运行测试、详细输出
-bash build.sh --op=stateless_random_uniform_v2 --build-type=Debug --run -v
+bash build.sh --ops=stateless_random_uniform_v2 --build-type=Debug --run -v
 
 # 多线程编译安装包
 bash build.sh --pkg --soc=ascend950 -j16 -v

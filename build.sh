@@ -92,7 +92,7 @@ show_help() {
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  --op=NAME              Build specific operator (e.g., stateless_random_uniform_v2)
+  --ops=NAME             Build specific operator(s) (e.g., stateless_random_uniform_v2)
   --soc=VERSION         Target SoC version $(printf "%s" "${SUPPORTED_SOCS}")
   --build-type=TYPE     Build type: Release (default), Debug
   --test-timeout=N      Test timeout in seconds (default: 300)
@@ -106,13 +106,13 @@ Options:
 
 Examples:
   $(basename "$0")                                    # Build all operators (default 8 threads)
-  $(basename "$0") --op=stateless_random_uniform_v2   # Build specific operator
-  $(basename "$0") --op=op1,op2                       # Build multiple operators
+  $(basename "$0") --ops=stateless_random_uniform_v2  # Build specific operator
+  $(basename "$0") --ops=op1,op2                      # Build multiple operators
   $(basename "$0") -j16                               # Build with 16 threads
   $(basename "$0") --run                              # Build all and run tests
-  $(basename "$0") --op=stateless_random_uniform_v2 --run  # Build and run tests
+  $(basename "$0") --ops=stateless_random_uniform_v2 --run # Build and run tests
   $(basename "$0") --pkg                              # Build package (default SoC: Ascend950)
-  $(basename "$0") --op=stateless_random_uniform_v2 --pkg # Build and package
+  $(basename "$0") --ops=stateless_random_uniform_v2 --pkg # Build and package
   $(basename "$0") --soc=Ascend950 --pkg              # Build package for Ascend950
   $(basename "$0") --soc=ascend950 --pkg              # Build package (lowercase also works)
   $(basename "$0") --test-timeout=600 --run           # Run tests with 600s timeout
@@ -241,7 +241,7 @@ clean_build_out() {
 parse_arguments() {
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --op=*)
+            --ops=*)
                 BUILD_OPERATORS="${1#*=}"
                 shift
                 ;;

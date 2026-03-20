@@ -370,7 +370,7 @@ source /usr/local/Ascend/cann/set_env.sh
 bash build.sh --pkg --soc=ascend950
 
 # 编译指定算子
-bash build.sh --pkg --soc=ascend950 --op=${op_name}
+bash build.sh --pkg --soc=ascend950 --ops=${op_name}
 ```
 
 若提示如下信息，说明编译成功：
@@ -391,7 +391,7 @@ ops-rand安装在`${ASCEND_HOME_PATH}/cann`路径中。
 
 ```bash
 # 编译并运行测试
-bash build.sh --op=${op_name} --run
+bash build.sh --ops=${op_name} --run
 ```
 
 ## 随机数生成注意事项
