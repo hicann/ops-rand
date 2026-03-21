@@ -40,13 +40,13 @@ extern "C" {
  *
  * @return ACL_SUCCESS on success, ACL_ERROR otherwise
  */
-aclError aclrandStatelessRandomUniformV2(
+aclError _aclrandStatelessRandomUniformV2(
     uint64_t seed, uint64_t offset, int32_t alg, void* output, uint64_t n, aclDataType dtype);
 
 /* Add more internal operator declarations here as needed:
  *
- * aclError aclrandStatelessRandomNormalV2(...);
- * aclError aclrandStatelessRandIntV2(...);
+ * aclError _aclrandStatelessRandomNormalV2(...);
+ * aclError _aclrandStatelessRandIntV2(...);
  */
 
 #ifdef __cplusplus

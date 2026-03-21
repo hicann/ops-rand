@@ -73,8 +73,8 @@ private:
     uint32_t tailBlockTilingSize_ = 0;
     uint32_t ubTilingSize_ = 0;
     uint32_t currUbTilingSize_ = 0;
-    uint32_t blockOffSet_ = 0;
-    uint32_t currOffSet_ = 0;
+    uint32_t blockOffset_ = 0;
+    uint32_t currOffset_ = 0;
     uint32_t ubLoopCnt_ = 0;
     uint32_t key_[ALG_KEY_SIZE] = {0};
     uint32_t counter_[ALG_COUNTER_SIZE] = {0};
@@ -91,7 +91,7 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Init(
 {
     ParseTilingData(tilingData);
     auto blockIdx = GetBlockIdx();
-    blockOffSet_ = blockTilingSize_ * blockIdx;
+    blockOffset_ = blockTilingSize_ * blockIdx;
 
     if (blockIdx == blockNum_ - 1) {
         currBlockTilingSize_ = tailBlockTilingSize_;
@@ -112,7 +112,7 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Init(
 template <typename T>
 __aicore__ inline void StatelessRandomUniformV2<T>::Process()
 {
-    auto groupCnt = (blockOffSet_ + RESULT_ELEMENT_CNT - 1) / RESULT_ELEMENT_CNT;
+    auto groupCnt = (blockOffset_ + RESULT_ELEMENT_CNT - 1) / RESULT_ELEMENT_CNT;
     Skip(groupCnt);
     ubLoopCnt_ = (currBlockTilingSize_ + ubTilingSize_ - 1) / ubTilingSize_;
     for (auto idx = 0; idx < ubLoopCnt_; idx++) {
@@ -120,7 +120,7 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Process()
         if ((idx == ubLoopCnt_ - 1) && (currBlockTilingSize_ % ubTilingSize_ != 0)) {
             currUbTilingSize_ = currBlockTilingSize_ % ubTilingSize_;
         }
-        currOffSet_ = blockOffSet_ + idx * ubTilingSize_;
+        currOffset_ = blockOffset_ + idx * ubTilingSize_;
         LocalTensor<uint32_t> philoxRes = philoxQueBuf_.Get<uint32_t>();
         LocalTensor<T> yOutput = outQueY_.AllocTensor<T>();
         PhiloxRandom<10>(
@@ -196,7 +196,7 @@ __aicore__ inline void StatelessRandomUniformV2<T>::CopyOut()
     DataCopyExtParams copyParams;
     copyParams.blockCount = 1;
     copyParams.blockLen = static_cast<uint32_t>(currUbTilingSize_ * sizeof(T));
-    DataCopyPad(outputGm_[currOffSet_], yOutput, copyParams);
+    DataCopyPad(outputGm_[currOffset_], yOutput, copyParams);
     outQueY_.FreeTensor(yOutput);
 }
 
@@ -241,17 +241,17 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Uint32ToFloat(LocalTensor<T>
         MicroAPI::Duplicate<int32_t, MicroAPI::MaskMergeMode::ZEROING>(vReg1, sReg2, maskAll); //  1 = 0x7fffffu
         MicroAPI::Duplicate<int32_t, MicroAPI::MaskMergeMode::ZEROING>(vReg3, sReg3, maskAll); // 3 = 127 << 23
         float sReg4 = static_cast<float>(-1.0);
-        int32_t offSet = static_cast<int32_t>(INT32_ONE_REPEAT);
+        int32_t offset = static_cast<int32_t>(INT32_ONE_REPEAT);
         for (uint16_t i = 0; i < static_cast<uint16_t>(repeatTimes); ++i) {
             mask = MicroAPI::UpdateMask<float>(sReg1);
             MicroAPI::DataCopy<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                vReg0, ubPhilox, offSet);
+                vReg0, ubPhilox, offset);
             MicroAPI::And<int32_t, MicroAPI::MaskMergeMode::ZEROING>(vReg2, vReg0, vReg1, mask);
             MicroAPI::Or<int32_t, MicroAPI::MaskMergeMode::ZEROING>(vReg4, vReg2, vReg3, mask);
             vReg5 = (MicroAPI::RegTensor<float>&)vReg4;
             MicroAPI::Adds<float, float, MicroAPI::MaskMergeMode::ZEROING>(vReg6, vReg5, sReg4, mask);
             MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_NORM_B32>(
-                ubOut, vReg6, offSet, mask);
+                ubOut, vReg6, offset, mask);
         }
     }
 }
@@ -362,18 +362,18 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Uint16ToBfloat16(LocalTensor
         MicroAPI::Duplicate(vReg3, sReg3, maskAll);
         bfloat16_t sReg4 = static_cast<bfloat16_t>(-1.0);
         MicroAPI::MaskReg mask;
-        int32_t offSet = static_cast<int32_t>(INT32_ONE_REPEAT);
+        int32_t offset = static_cast<int32_t>(INT32_ONE_REPEAT);
         for (uint16_t i = 0; i < static_cast<uint16_t>(repeatTimes); ++i) {
             mask = MicroAPI::UpdateMask<float>(sReg1);
             MicroAPI::DataCopy<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                vRegT, ubPhilox, offSet);
+                vRegT, ubPhilox, offset);
             MicroAPI::Cast<int16_t, int32_t, castTraitTf>(vReg0, vRegT, mask);
             MicroAPI::And<int16_t, MicroAPI::MaskMergeMode::ZEROING>(vReg2, vReg0, vReg1, mask);
             MicroAPI::Or<int16_t, MicroAPI::MaskMergeMode::ZEROING>(vReg4, vReg2, vReg3, mask);
             vReg5 = (MicroAPI::RegTensor<bfloat16_t>&)vReg4;
             MicroAPI::Adds<bfloat16_t, bfloat16_t, MicroAPI::MaskMergeMode::ZEROING>(vReg6, vReg5, sReg4, mask);
             MicroAPI::DataCopy<bfloat16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK_B32>(
-                ubOut, vReg6, offSet, mask);
+                ubOut, vReg6, offset, mask);
         }
     }
     set_ctrl(sbitset1(get_ctrl(), 60));

@@ -23,14 +23,14 @@
 using namespace StatelessRandom;
 
 namespace {
-#define FLOAT_TILING_KEY 101
-#define FLOAT16_TILING_KEY 102
-#define BFLOAT16_TILING_KEY 103
-} // namespace
-
+constexpr uint32_t FLOAT_TILING_KEY = 101;
+constexpr uint32_t FLOAT16_TILING_KEY = 102;
+constexpr uint32_t BFLOAT16_TILING_KEY = 103;
 constexpr uint32_t CORE_ALIGN_SIZE = 512;
 constexpr uint32_t MIN_TILING_SIZE = 256;
 constexpr uint32_t BLOCK_SIZE_BYTES = 32;
+constexpr uint32_t UB_DIVISOR = 4;  // UB size divisor for tiling calculation
+
 template <typename T1, typename T2>
 inline T1 CeilDiv(const T1 a, const T2 b)
 {
@@ -39,6 +39,88 @@ inline T1 CeilDiv(const T1 a, const T2 b)
     }
     return (a + b - 1) / b;
 }
+
+/**
+ * @brief Get data type size and tiling key based on aclDataType
+ * @param dtype Input data type
+ * @param dtypeSize Output: size of the data type in bytes
+ * @param tilingKey Output: tiling key for the data type
+ * @return ACL_SUCCESS on success, ACL_ERROR_INVALID_PARAM for unsupported dtype
+ */
+aclError GetDtypeInfo(aclDataType dtype, uint32_t& dtypeSize, uint32_t& tilingKey)
+{
+    switch (dtype) {
+        case ACL_FLOAT:
+            dtypeSize = sizeof(float);
+            tilingKey = FLOAT_TILING_KEY;
+            return ACL_SUCCESS;
+        case ACL_FLOAT16:
+            dtypeSize = sizeof(uint16_t);
+            tilingKey = FLOAT16_TILING_KEY;
+            return ACL_SUCCESS;
+        case ACL_BF16:
+            dtypeSize = sizeof(uint16_t);
+            tilingKey = BFLOAT16_TILING_KEY;
+            return ACL_SUCCESS;
+        default:
+            return ACL_ERROR_INVALID_PARAM;
+    }
+}
+
+/**
+ * @brief Calculate tiling parameters for the kernel
+ * @param outputSize Total output size in bytes
+ * @param dtypeSize Size of each element in bytes
+ * @param platform AscendC platform instance
+ * @param tilingData Output: calculated tiling parameters
+ */
+void CalcTilingData(
+    size_t outputSize,
+    uint32_t dtypeSize,
+    platform_ascendc::PlatformAscendC* platform,
+    StatelessRandomUniformV2TilingData& tilingData)
+{
+    auto coreNum = platform->GetCoreNumAiv();
+    auto coreAlignFactor = CORE_ALIGN_SIZE / dtypeSize;
+    auto blockFactor = CeilDiv(outputSize, coreNum);
+    auto blockAlignFactor = CeilDiv(blockFactor, coreAlignFactor) * coreAlignFactor;
+
+    tilingData.blockTilingSize = std::max(static_cast<uint32_t>(blockAlignFactor), MIN_TILING_SIZE);
+    tilingData.blockNum = CeilDiv(outputSize, tilingData.blockTilingSize);
+    tilingData.tailBlockTilingSize = outputSize - tilingData.blockTilingSize * (tilingData.blockNum - 1);
+
+    uint64_t ubSize = 0;
+    platform->GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    auto quarterUbSize = ubSize / UB_DIVISOR;
+    auto alignFactor = BLOCK_SIZE_BYTES / dtypeSize;
+    tilingData.ubTilingSize = CeilDiv(quarterUbSize / dtypeSize, alignFactor) * alignFactor;
+}
+
+/**
+ * @brief Pack seed and offset into tiling data structure
+ * @param seed Random seed value
+ * @param offset Random offset value
+ * @param alg Algorithm identifier
+ * @param tilingKey Tiling key for data type
+ * @param tilingData Output: tiling data with packed values
+ */
+void PackSeedAndOffset(
+    uint64_t seed,
+    uint64_t offset,
+    int32_t alg,
+    uint32_t tilingKey,
+    StatelessRandomUniformV2TilingData& tilingData)
+{
+    tilingData.alg = alg;
+    tilingData.tilingKey = tilingKey;
+    tilingData.counter[0] = static_cast<uint32_t>(offset);
+    tilingData.counter[1] = static_cast<uint32_t>(offset >> 32);
+    tilingData.counter[2] = 0;
+    tilingData.counter[3] = 0;
+    tilingData.key[0] = static_cast<uint32_t>(seed);
+    tilingData.key[1] = static_cast<uint32_t>(seed >> 32);
+}
+} // namespace
 
 extern "C" __global__ __aicore__ void stateless_random_uniform_v2(
     GM_ADDR y, StatelessRandomUniformV2TilingData tilingData)
@@ -59,79 +141,50 @@ extern "C" __global__ __aicore__ void stateless_random_uniform_v2(
     }
 }
 
-extern "C" aclError aclrandStatelessRandomUniformV2(
+extern "C" aclError _aclrandStatelessRandomUniformV2(
     uint64_t seed, uint64_t offset, int32_t alg, void* output, uint64_t n, aclDataType dtype)
 {
-    // Parameter validation
+    // 1. Parameter validation
     if (output == nullptr || n == 0) {
         return ACL_ERROR;
     }
 
-    // Set parameters based on data type
-    uint32_t outputDtypeSize;
-    uint32_t tilingKey;
-
-    switch (dtype) {
-        case ACL_FLOAT:
-            outputDtypeSize = sizeof(float);
-            tilingKey = FLOAT_TILING_KEY;
-            break;
-        case ACL_FLOAT16:
-            outputDtypeSize = sizeof(uint16_t);
-            tilingKey = FLOAT16_TILING_KEY;
-            break;
-        case ACL_BF16:
-            outputDtypeSize = sizeof(uint16_t);
-            tilingKey = BFLOAT16_TILING_KEY;
-            break;
-        default:
-            return ACL_ERROR_INVALID_PARAM;
+    // 2. Get data type information
+    uint32_t dtypeSize = 0;
+    uint32_t tilingKey = 0;
+    aclError ret = GetDtypeInfo(dtype, dtypeSize, tilingKey);
+    if (ret != ACL_SUCCESS) {
+        return ret;
     }
 
-    size_t outputSize_ = static_cast<size_t>(n) * outputDtypeSize;
-
-    // Allocate device memory for output
-    void* dev_out = nullptr;
-    if (aclrtMalloc(&dev_out, outputSize_, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
+    // 3. Allocate device memory
+    size_t outputSize = static_cast<size_t>(n) * dtypeSize;
+    void* devOut = nullptr;
+    if (aclrtMalloc(&devOut, outputSize, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
         return ACL_ERROR;
     }
-    auto ascendcPlatform = platform_ascendc::PlatformAscendCManager::GetInstance();
 
+    // 4. Calculate tiling parameters
+    auto platform = platform_ascendc::PlatformAscendCManager::GetInstance();
+    if (platform == nullptr) {
+        aclrtFree(devOut);
+        return ACL_ERROR;
+    }
     StatelessRandomUniformV2TilingData tilingData;
-    auto coreNum_ = ascendcPlatform->GetCoreNumAiv();
-    auto coreAlignFactor = CORE_ALIGN_SIZE / outputDtypeSize;
-    auto blockFactor = CeilDiv(outputSize_, coreNum_);
-    auto blockAlignFactor = CeilDiv(blockFactor, coreAlignFactor) * coreAlignFactor;
-    auto minTilingSize = MIN_TILING_SIZE;
-    tilingData.blockTilingSize = std::max(static_cast<uint32_t>(blockAlignFactor), minTilingSize);
-    tilingData.blockNum = CeilDiv(outputSize_, tilingData.blockTilingSize);
-    tilingData.tailBlockTilingSize = outputSize_ - tilingData.blockTilingSize * (tilingData.blockNum - 1);
+    CalcTilingData(outputSize, dtypeSize, platform, tilingData);
+    PackSeedAndOffset(seed, offset, alg, tilingKey, tilingData);
 
-    uint64_t ubSize = 0;
-    ascendcPlatform->GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    auto coefVal = 2;
-    auto quarterUbSize = ubSize / (2 + coefVal);
-    auto alignFactor = BLOCK_SIZE_BYTES / outputDtypeSize;
-    tilingData.ubTilingSize = CeilDiv(quarterUbSize / outputDtypeSize, alignFactor) * alignFactor;
-    tilingData.alg = alg;
-    tilingData.counter[0] = static_cast<uint32_t>(offset);
-    tilingData.counter[1] = static_cast<uint32_t>(offset >> 32);
-    tilingData.counter[2] = 0;
-    tilingData.counter[3] = 0;
-    tilingData.key[0] = static_cast<uint32_t>(seed);
-    tilingData.key[1] = static_cast<uint32_t>(seed >> 32);
-    tilingData.tilingKey = tilingKey;
+    // 5. Launch kernel
+    stateless_random_uniform_v2<<<tilingData.blockNum, nullptr, 0>>>((__gm__ uint8_t*)devOut, tilingData);
 
-    stateless_random_uniform_v2<<<tilingData.blockNum, nullptr, 0>>>((__gm__ uint8_t*)dev_out, tilingData);
-
-    // Copy device output back to host
-    if (aclrtMemcpy(output, outputSize_, dev_out, outputSize_, ACL_MEMCPY_DEVICE_TO_HOST) != ACL_SUCCESS) {
-        aclrtFree(dev_out);
+    // 6. Copy result back to host
+    if (aclrtMemcpy(output, outputSize, devOut, outputSize, ACL_MEMCPY_DEVICE_TO_HOST) != ACL_SUCCESS) {
+        aclrtFree(devOut);
         return ACL_ERROR;
     }
 
-    // Free device memory
-    aclrtFree(dev_out);
+    // 7. Free device memory
+    aclrtFree(devOut);
 
     return ACL_SUCCESS;
 }

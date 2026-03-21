@@ -63,8 +63,8 @@ ${op_name}/                              # 算子名的小写下划线形式
 extern "C" {
 #endif
 
-/* 无状态均匀分布随机数生成 */
-ACLRAND_API aclError aclrandStatelessRandomUniformV2(
+/* 无状态均匀分布随机数生成 (内部API) */
+aclError _aclrandStatelessRandomUniformV2(
     uint64_t seed,
     uint64_t offset,
     int32_t alg,
@@ -205,7 +205,7 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Init(
 
     // 2. 计算当前核的偏移量
     auto blockIdx = GetBlockIdx();
-    blockOffSet_ = blockTilingSize_ * blockIdx;
+    blockOffset_ = blockTilingSize_ * blockIdx;
 
     // 3. 处理尾核情况
     if (blockIdx == blockNum_ - 1) {
@@ -228,7 +228,7 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Init(
 template <typename T>
 __aicore__ inline void StatelessRandomUniformV2<T>::Process() {
     // 1. 计算并跳过偏移量
-    auto groupCnt = (blockOffSet_ + RESULT_ELEMENT_CNT - 1) / RESULT_ELEMENT_CNT;
+    auto groupCnt = (blockOffset_ + RESULT_ELEMENT_CNT - 1) / RESULT_ELEMENT_CNT;
     Skip(groupCnt);
 
     // 2. 分UB循环处理
@@ -241,7 +241,7 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Process() {
             currUbTilingSize_ = currBlockTilingSize_ % ubTilingSize_;
         }
 
-        currOffSet_ = blockOffSet_ + idx * ubTilingSize_;
+        currOffset_ = blockOffset_ + idx * ubTilingSize_;
 
         // 3. 生成随机数
         LocalTensor<uint32_t> philoxRes = philoxQueBuf_.Get<uint32_t>();
@@ -308,7 +308,7 @@ extern "C" __global__ __aicore__ void stateless_random_uniform_v2(
 ### Host侧API实现
 
 ```cpp
-aclError aclrandStatelessRandomUniformV2(
+aclError _aclrandStatelessRandomUniformV2(
     uint64_t seed,
     uint64_t offset,
     int32_t alg,
@@ -321,8 +321,8 @@ aclError aclrandStatelessRandomUniformV2(
     }
 
     // 2. 分配设备内存
-    void *dev_out = nullptr;
-    aclrtMalloc(&dev_out, n * sizeof(float), ACL_MEM_MALLOC_HUGE_FIRST);
+    void *devOut = nullptr;
+    aclrtMalloc(&devOut, n * sizeof(float), ACL_MEM_MALLOC_HUGE_FIRST);
 
     // 3. 计算Tiling参数
     auto ascendcPlatform = platform_ascendc::PlatformAscendCManager::GetInstance();
@@ -331,14 +331,14 @@ aclError aclrandStatelessRandomUniformV2(
 
     // 4. 启动Kernel
     stateless_random_uniform_v2<<<tilingData->blockNum, nullptr, 0>>>(
-        (__gm__ uint8_t *)dev_out, *tilingData
+        (__gm__ uint8_t *)devOut, *tilingData
     );
 
     // 5. 拷贝结果到Host
-    aclrtMemcpy(output, n * sizeof(float), dev_out, n * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    aclrtMemcpy(output, n * sizeof(float), devOut, n * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
 
     // 6. 释放资源
-    aclrtFree(dev_out);
+    aclrtFree(devOut);
 
     return ACL_SUCCESS;
 }

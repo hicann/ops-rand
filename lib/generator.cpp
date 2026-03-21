@@ -133,7 +133,7 @@ aclrandStatus_t aclrandGenerateUniform(aclrandGenerator_t generator, float *outp
 	switch (g->rng_type) {
 		case ACLRAND_RNG_PSEUDO_DEFAULT:
 		case ACLRAND_RNG_PSEUDO_PHILOX4_32_10:
-			ret = aclrandStatelessRandomUniformV2(
+			ret = _aclrandStatelessRandomUniformV2(
 				g->seed, g->offset, ALG_PHILOX, output, n, ACL_FLOAT);
 			break;
 		default:
