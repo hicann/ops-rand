@@ -97,32 +97,32 @@ extern "C" aclError aclrandStatelessRandomUniformV2(
     }
     auto ascendcPlatform = platform_ascendc::PlatformAscendCManager::GetInstance();
 
-    StatelessRandomUniformV2TilingData* tilingData = new StatelessRandomUniformV2TilingData();
+    StatelessRandomUniformV2TilingData tilingData;
     auto coreNum_ = ascendcPlatform->GetCoreNumAiv();
     auto coreAlignFactor = CORE_ALIGN_SIZE / outputDtypeSize;
     auto blockFactor = CeilDiv(outputSize_, coreNum_);
     auto blockAlignFactor = CeilDiv(blockFactor, coreAlignFactor) * coreAlignFactor;
     auto minTilingSize = MIN_TILING_SIZE;
-    tilingData->blockTilingSize = std::max(static_cast<uint32_t>(blockAlignFactor), minTilingSize);
-    tilingData->blockNum = CeilDiv(outputSize_, tilingData->blockTilingSize);
-    tilingData->tailBlockTilingSize = outputSize_ - tilingData->blockTilingSize * (tilingData->blockNum - 1);
+    tilingData.blockTilingSize = std::max(static_cast<uint32_t>(blockAlignFactor), minTilingSize);
+    tilingData.blockNum = CeilDiv(outputSize_, tilingData.blockTilingSize);
+    tilingData.tailBlockTilingSize = outputSize_ - tilingData.blockTilingSize * (tilingData.blockNum - 1);
 
     uint64_t ubSize = 0;
     ascendcPlatform->GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     auto coefVal = 2;
     auto quarterUbSize = ubSize / (2 + coefVal);
     auto alignFactor = BLOCK_SIZE_BYTES / outputDtypeSize;
-    tilingData->ubTilingSize = CeilDiv(quarterUbSize / outputDtypeSize, alignFactor) * alignFactor;
-    tilingData->alg = alg;
-    tilingData->counter[0] = static_cast<uint32_t>(offset);
-    tilingData->counter[1] = static_cast<uint32_t>(offset >> 32);
-    tilingData->counter[2] = 0;
-    tilingData->counter[3] = 0;
-    tilingData->key[0] = static_cast<uint32_t>(seed);
-    tilingData->key[1] = static_cast<uint32_t>(seed >> 32);
-    tilingData->tilingKey = tilingKey;
+    tilingData.ubTilingSize = CeilDiv(quarterUbSize / outputDtypeSize, alignFactor) * alignFactor;
+    tilingData.alg = alg;
+    tilingData.counter[0] = static_cast<uint32_t>(offset);
+    tilingData.counter[1] = static_cast<uint32_t>(offset >> 32);
+    tilingData.counter[2] = 0;
+    tilingData.counter[3] = 0;
+    tilingData.key[0] = static_cast<uint32_t>(seed);
+    tilingData.key[1] = static_cast<uint32_t>(seed >> 32);
+    tilingData.tilingKey = tilingKey;
 
-    stateless_random_uniform_v2<<<tilingData->blockNum, nullptr, 0>>>((__gm__ uint8_t*)dev_out, *tilingData);
+    stateless_random_uniform_v2<<<tilingData.blockNum, nullptr, 0>>>((__gm__ uint8_t*)dev_out, tilingData);
 
     // Copy device output back to host
     if (aclrtMemcpy(output, outputSize_, dev_out, outputSize_, ACL_MEMCPY_DEVICE_TO_HOST) != ACL_SUCCESS) {
