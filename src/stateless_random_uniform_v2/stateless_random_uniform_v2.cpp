@@ -17,7 +17,6 @@
 #include "../common/utils.h"
 #include "platform/platform_info.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "log/log.h"
 #include "acl/acl.h"
 
 using namespace StatelessRandom;
@@ -126,15 +125,15 @@ extern "C" __global__ __aicore__ void stateless_random_uniform_v2(
     GM_ADDR y, StatelessRandomUniformV2TilingData tilingData)
 {
     TPipe pipe;
-    if (TILING_KEY_IS(FLOAT_TILING_KEY)) {
+    if (tilingData.tilingKey == FLOAT_TILING_KEY) {
         StatelessRandomUniformV2<float> op;
         op.Init(y, &tilingData, &pipe);
         op.Process();
-    } else if (TILING_KEY_IS(FLOAT16_TILING_KEY)) {
+    } else if (tilingData.tilingKey == FLOAT16_TILING_KEY) {
         StatelessRandomUniformV2<half> op;
         op.Init(y, &tilingData, &pipe);
         op.Process();
-    } else if (TILING_KEY_IS(BFLOAT16_TILING_KEY)) {
+    } else if (tilingData.tilingKey == BFLOAT16_TILING_KEY) {
         StatelessRandomUniformV2<bfloat16_t> op;
         op.Init(y, &tilingData, &pipe);
         op.Process();

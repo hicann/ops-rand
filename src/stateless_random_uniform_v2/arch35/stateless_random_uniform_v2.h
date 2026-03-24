@@ -206,13 +206,6 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Uint32ToFloat(LocalTensor<T>
     /*
     |1|_____8____|___________23___________|
     |s|exponent  | mantissa               |
-
-    const uint32_t man = x & 0x7fffffu; // 23 bit mantissa
-    const uint32_t exp = static_cast<uint32_t>(127);  // 7 bit exp
-    const uint32_t val = (exp << 23) | man;
-    float result;
-    memcpy(&result, &val, sizeof(val));
-    return  result - 1.0f;
     */
 
     // philox result saved in PhiloxQueBuf

@@ -17,6 +17,8 @@
 #include "cann_ops_rand.h"
 #include <iostream>
 
+namespace GeneratorTest {
+
 // Test create generator
 void test_create_generator(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
@@ -282,8 +284,6 @@ void test_generate_uniform_unsupported_rng(aclrtStream stream, OpsRandTest::Test
     TEST_CASE_PASS(stats, "test_generate_uniform_unsupported_rng");
 }
 
-// Export function
-namespace GeneratorTest {
 void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     test_create_generator(stream, stats);
@@ -297,6 +297,7 @@ void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
     test_generate_uniform_reproducibility(stream, stats);
     test_generate_uniform_unsupported_rng(stream, stats);
 }
+
 } // namespace GeneratorTest
 
 // Auto-register to test framework

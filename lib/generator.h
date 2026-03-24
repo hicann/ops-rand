@@ -15,32 +15,18 @@
 
 #pragma once
 
-/* Use plain C types in header for C-only API */
-#include <stdint.h>
-#include <stddef.h>
+#include <cstddef>
+#include <cstdint>
 #include <acl/acl_rt.h>
 #include "cann_ops_rand.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 namespace opsrand {
 
-	struct Generator {
-		uint64_t seed;
-		int rng_type;
-		size_t offset;
-		aclrtStream stream_id;
+struct Generator {
+    uint64_t seed;
+    int rng_type;
+    size_t offset;
+    aclrtStream stream_id;
+};
 
-	};
-}
-
-
-
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-
+} // namespace opsrand

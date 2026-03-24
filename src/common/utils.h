@@ -10,12 +10,12 @@
 
 /*!
  * \file utils.h
- * \brief
+ * \brief 公共工具函数定义
  */
 
 #pragma once
 
-#define TILING_KEY_IS(key) (tilingData.tilingKey == (key))
+namespace opsrand {
 
 template <typename T>
 __aicore__ inline T CeilDiv(const T a, const T b)
@@ -25,3 +25,5 @@ __aicore__ inline T CeilDiv(const T a, const T b)
     }
     return (a + b - 1) / b;
 }
+
+} // namespace opsrand

@@ -150,10 +150,12 @@ function(register_operator)
         ${OP_SOURCE_DIR}/${ARG_ARCH_DIR}
     )
 
-    # ========= 编译宏定义 =========
-    target_compile_definitions(${OPS_RAND} PRIVATE
-        -DASCENDC_ASSERT=
-        ENABLE_OPERATOR_${OP_UPPER}=1
+    # ========= 编译选项 =========
+    target_compile_options(${OPS_RAND} PRIVATE
+        -Werror
+        # kernel launch 语法中 __gm__ 宏展开为 cce_global 属性，编译器解析参数类型时会忽略该属性
+        # 此警告无法消除，仅抑制其导致编译失败
+        -Wno-error=ignored-attributes
     )
 
     # ========= 输出注册信息 =========

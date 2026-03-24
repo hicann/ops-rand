@@ -17,6 +17,8 @@
 #include <cmath>
 #include <algorithm>
 
+namespace StatelessRandomUniformV2Test {
+
 // 测试基本随机数生成
 void test_basic_random(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
@@ -222,8 +224,6 @@ void test_bfloat16_type(aclrtStream stream, OpsRandTest::TestStats& stats)
     TEST_CASE_PASS(stats, "test_bfloat16_type");
 }
 
-// 导出函数
-namespace StatelessRandomUniformV2Test {
 void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     test_basic_random(stream, stats);
@@ -235,7 +235,8 @@ void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
     test_float16_type(stream, stats);
     test_bfloat16_type(stream, stats);
 }
-}// namespace StatelessRandomUniformV2Test
+
+} // namespace StatelessRandomUniformV2Test
 
 // 自动注册到测试框架
 REGISTER_OP_TEST(StatelessRandomUniformV2)
