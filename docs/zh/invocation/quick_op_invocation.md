@@ -17,7 +17,7 @@
 
     进入项目根目录，执行如下编译命令：
 
-    > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装。
+    > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装，具体参考[未联网编译](#未联网编译)。
 
     ```bash
     # 编译所有算子并生成安装包
@@ -35,19 +35,84 @@
 
     编译成功后，run包存放于项目根目录的build_out目录下。
 
+### 未联网编译
+
+若在没有连接互联网的环境下编译，需要提前准备好依赖的第三方软件，再进行源码编译。具体过程如下：
+
+1. **检查基础环境是否完备**
+
+    请确保已按[环境部署](../context/quick_install.md)完成基础环境搭建，包括CANN包安装、源码下载等。
+
+    - 在联网环境中，进入[本项目主页](https://gitcode.com/cann/ops-rand)，通过`下载ZIP`或`clone`按钮，根据指导完成源码下载。
+    - 连接离线环境，上传源码至您指定的目录下。若下载的是源码压缩包，请先进行解压。
+
+2. **下载第三方软件依赖**
+
+    在联网环境中提前下载第三方软件，目前有如下方式，请按需选择：
+
+    - 方式1：根据[第三方软件依赖](#第三方软件依赖)提供的表格手动下载，若从其他地址下载，请确保版本号一致。
+
+    - 方式2：通过[third_lib_download.py](../../../scripts/tools/third_lib_download.py)脚本一键下载，该脚本在本项目`scripts/tools/`目录，下载该脚本并执行如下命令：
+
+        ```bash
+        python ${scripts_dir}/third_lib_download.py
+        ```
+
+    ${scripts_dir}表示脚本存放路径，下载的第三方软件包默认存放在当前脚本所在目录。
+
+3. **编译算子包**
+
+    将下载好的第三方软件上传至离线环境，可存放在`third_party`目录或自定义目录下。**推荐前者，其编译命令与联网编译场景下的命令一致。**
+
+    - **third\_party目录**（推荐）
+
+        请在本项目根目录创建`third_party`目录（若有则无需创建），将第三方软件拷贝到该指定目录。此时编译命令与联网编译命令一致。
+
+        ```bash
+        bash build.sh --pkg --soc=ascend950
+        ```
+
+    - **自定义目录**
+
+        在离线环境的任意位置新建`${cann_3rd_lib_path}`目录，将第三方软件拷贝到该目录，请确保该目录有权限访问。
+
+        ```bash
+        mkdir -p ${cann_3rd_lib_path}
+        ```
+
+        此时编译命令需在联网编译命令基础上额外增加`--cann_3rd_lib_path=${cann_3rd_lib_path}`用于指定第三方软件所在路径。假设存放路径为`/path/cann_3rd_lib_path`，命令如下：
+
+        ```bash
+        bash build.sh --pkg --soc=ascend950 --cann_3rd_lib_path=/path/cann_3rd_lib_path
+        ```
+
+4. **安装/卸载算子包**
+
+    未联网和联网场景下编译得到的算子包结果一样，安装和卸载的操作命令也一样，具体参见下文步骤2和步骤4。
+
+### 第三方软件依赖
+
+本项目编译过程依赖的第三方开源软件列表如下：
+
+| 开源软件 | 版本 | 下载地址 |
+|---|---|---|
+| makeself | 2.5.0 | [makeself-release-2.5.0-patch1.tar.gz](https://gitcode.com/cann-src-third-party/makeself/releases/download/release-2.5.0-patch1.0/makeself-release-2.5.0-patch1.tar.gz) |
+
+若您的编译环境可以访问网络，编译脚本会自动联网下载第三方软件。否则，请参考[未联网编译](#未联网编译)手动下载第三方软件。
+
 2. **安装ops-rand包**
 
     ```bash
     # 安装命令
-    ./build_out/cann-950-ops-rand_*_linux*.run
+    ./build_out/cann-950-ops-rand_*_linux*.run --full --install-path=${install_path}
     ```
 
-    ops-rand安装在`${ASCEND_HOME_PATH}/cann`路径中，`${ASCEND_HOME_PATH}`表示CANN软件安装目录。
+    ops-rand安装在`${install_path}/cann`路径中，`${install_path}`表示CANN软件安装目录。
 
 3. **配置环境变量**
 
     ```bash
-    source ${ASCEND_HOME_PATH}/cann/set_env.bash
+    source ${install_path}/cann/set_env.bash
     ```
 
 4. **（可选）卸载ops-rand包**

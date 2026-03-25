@@ -9,12 +9,13 @@
  */
 
 #include "generator.h"
-#include "cann_ops_rand.h"
-#include "internal/ops_impl.h"
+
 #include <new>
 
-extern "C" {
+#include "cann_ops_rand.h"
+#include "internal/ops_impl.h"
 
+extern "C" {
 namespace {
 
 /**
@@ -35,8 +36,9 @@ aclrandStatus_t toAclrandStatus(aclError aclRet) {
         return ACLRAND_STATUS_SUCCESS;
     }
 
-    // Parameter errors (107xxx)
-    if (aclRet >= 107000 && aclRet < 108000) {
+    // Parameter errors (107xxx): 107000-107039
+    // Next range starts at 207000 (ACL_ERROR_RT_FEATURE_NOT_SUPPORT)
+    if (aclRet >= ACL_ERROR_RT_PARAM_INVALID && aclRet < ACL_ERROR_RT_FEATURE_NOT_SUPPORT) {
         return ACLRAND_STATUS_OUT_OF_RANGE;
     }
 

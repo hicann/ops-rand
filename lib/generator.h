@@ -17,7 +17,9 @@
 
 #include <cstddef>
 #include <cstdint>
+
 #include <acl/acl_rt.h>
+
 #include "cann_ops_rand.h"
 
 namespace opsrand {

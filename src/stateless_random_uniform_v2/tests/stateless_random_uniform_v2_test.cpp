@@ -9,13 +9,15 @@
  * @brief stateless_random_uniform_v2算子单元测试
  */
 
-#include "cann_ops_rand.h"
-#include "internal/ops_impl.h"
 #include "stateless_random_uniform_v2_test.h"
+
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <vector>
-#include <cmath>
-#include <algorithm>
+
+#include "cann_ops_rand.h"
+#include "internal/ops_impl.h"
 
 namespace StatelessRandomUniformV2Test {
 

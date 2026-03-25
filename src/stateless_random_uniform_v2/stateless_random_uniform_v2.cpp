@@ -14,10 +14,12 @@
  */
 
 #include "arch35/stateless_random_uniform_v2.h"
-#include "../common/utils.h"
+
+#include "acl/acl.h"
 #include "platform/platform_info.h"
 #include "tiling/platform/platform_ascendc.h"
-#include "acl/acl.h"
+
+#include "../common/utils.h"
 
 using namespace StatelessRandom;
 

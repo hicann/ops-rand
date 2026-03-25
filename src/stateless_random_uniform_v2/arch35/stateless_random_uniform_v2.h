@@ -255,13 +255,6 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Uint16ToHalf(LocalTensor<T>&
     /*
       |1|____5____|__________10___________|
       |s|exponent  | mantissa             |
-
-      const uint16_t man = x & 0x3ffu; // 10 bit mantissa
-      const uint16_t expr = staic_cast<uint16_t>(15);  // 5 bit exp
-      const uint16_t val = (exp << 10) | man;
-      float16 result;
-      memcpy(&result, &val, sizeof(val));
-      return  result - half(1.0);
       */
 
     // philox result saved in PhiloxQueBuf
