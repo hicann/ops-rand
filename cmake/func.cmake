@@ -153,9 +153,6 @@ function(register_operator)
     # ========= 编译选项 =========
     target_compile_options(${OPS_RAND} PRIVATE
         -Werror
-        # kernel launch 语法中 __gm__ 宏展开为 cce_global 属性，编译器解析参数类型时会忽略该属性
-        # 此警告无法消除，仅抑制其导致编译失败
-        -Wno-error=ignored-attributes
     )
 
     # ========= 输出注册信息 =========

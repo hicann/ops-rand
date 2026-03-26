@@ -37,11 +37,12 @@ extern "C" {
  * @param output  Output array pointer (host memory)
  * @param n       Number of random numbers to generate
  * @param dtype   Data type of output (ACL_FLOAT, ACL_FLOAT16, or ACL_BF16)
+ * @param stream  ACL stream for async execution (nullptr for default stream)
  *
  * @return ACL_SUCCESS on success, ACL_ERROR otherwise
  */
 aclError _aclrandStatelessRandomUniformV2(
-    uint64_t seed, uint64_t offset, int32_t alg, void* output, uint64_t n, aclDataType dtype);
+    uint64_t seed, uint64_t offset, int32_t alg, void* output, uint64_t n, aclDataType dtype, aclrtStream stream);
 
 /* Add more internal operator declarations here as needed:
  *

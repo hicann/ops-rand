@@ -126,6 +126,7 @@ void PackSeedAndOffset(
 extern "C" __global__ __aicore__ void stateless_random_uniform_v2(
     GM_ADDR y, StatelessRandomUniformV2TilingData tilingData)
 {
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     TPipe pipe;
     if (tilingData.tilingKey == FLOAT_TILING_KEY) {
         StatelessRandomUniformV2<float> op;
@@ -143,7 +144,7 @@ extern "C" __global__ __aicore__ void stateless_random_uniform_v2(
 }
 
 extern "C" aclError _aclrandStatelessRandomUniformV2(
-    uint64_t seed, uint64_t offset, int32_t alg, void* output, uint64_t n, aclDataType dtype)
+    uint64_t seed, uint64_t offset, int32_t alg, void* output, uint64_t n, aclDataType dtype, aclrtStream stream)
 {
     // 1. Parameter validation
     if (output == nullptr || n == 0) {
@@ -176,7 +177,8 @@ extern "C" aclError _aclrandStatelessRandomUniformV2(
     PackSeedAndOffset(seed, offset, alg, tilingKey, tilingData);
 
     // 5. Launch kernel
-    stateless_random_uniform_v2<<<tilingData.blockNum, nullptr, 0>>>((__gm__ uint8_t*)devOut, tilingData);
+    stateless_random_uniform_v2<<<tilingData.blockNum, nullptr, stream>>>(
+        reinterpret_cast<uint8_t*>(devOut), tilingData);
 
     // 6. Copy result back to host
     if (aclrtMemcpy(output, outputSize, devOut, outputSize, ACL_MEMCPY_DEVICE_TO_HOST) != ACL_SUCCESS) {

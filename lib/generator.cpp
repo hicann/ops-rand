@@ -137,7 +137,7 @@ aclrandStatus_t aclrandGenerateUniform(aclrandGenerator_t generator, float *outp
         case ACLRAND_RNG_PSEUDO_DEFAULT:
         case ACLRAND_RNG_PSEUDO_PHILOX4_32_10:
             ret = _aclrandStatelessRandomUniformV2(
-                g->seed, g->offset, ALG_PHILOX, output, n, ACL_FLOAT);
+                g->seed, g->offset, ALG_PHILOX, output, n, ACL_FLOAT, g->stream_id);
             break;
         default:
             return ACLRAND_STATUS_TYPE_ERROR;

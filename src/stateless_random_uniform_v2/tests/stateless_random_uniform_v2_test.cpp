@@ -36,7 +36,7 @@ void test_basic_random(aclrtStream stream, OpsRandTest::TestStats& stats)
     int32_t alg = 1;
     std::vector<float> output(n);
 
-    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, output.data(), n, ACL_FLOAT);
+    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, output.data(), n, ACL_FLOAT, stream);
 
     TEST_ASSERT(stats, result == ACL_SUCCESS, "return code failed");
 
@@ -63,7 +63,7 @@ void test_null_pointer(aclrtStream stream, OpsRandTest::TestStats& stats)
     uint64_t offset = 0;
     int32_t alg = 1;
 
-    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, nullptr, 100, ACL_FLOAT);
+    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, nullptr, 100, ACL_FLOAT, stream);
 
     TEST_ASSERT(stats, result != ACL_SUCCESS, "null output should fail");
 
@@ -80,7 +80,7 @@ void test_invalid_size(aclrtStream stream, OpsRandTest::TestStats& stats)
     int32_t alg = 1;
     float output[10];
 
-    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, output, 0, ACL_FLOAT);
+    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, output, 0, ACL_FLOAT, stream);
 
     TEST_ASSERT(stats, result != ACL_SUCCESS, "zero size should fail");
 
@@ -100,8 +100,8 @@ void test_reproducibility(aclrtStream stream, OpsRandTest::TestStats& stats)
     std::vector<float> output2(n);
 
     // 使用相同的 seed 和 offset 生成两次
-    aclError result1 = _aclrandStatelessRandomUniformV2(seed, offset, alg, output1.data(), n, ACL_FLOAT);
-    aclError result2 = _aclrandStatelessRandomUniformV2(seed, offset, alg, output2.data(), n, ACL_FLOAT);
+    aclError result1 = _aclrandStatelessRandomUniformV2(seed, offset, alg, output1.data(), n, ACL_FLOAT, stream);
+    aclError result2 = _aclrandStatelessRandomUniformV2(seed, offset, alg, output2.data(), n, ACL_FLOAT, stream);
 
     TEST_ASSERT(stats, result1 == ACL_SUCCESS, "first call failed");
     TEST_ASSERT(stats, result2 == ACL_SUCCESS, "second call failed");
@@ -124,8 +124,8 @@ void test_different_seeds(aclrtStream stream, OpsRandTest::TestStats& stats)
     std::vector<float> output2(n);
 
     // 使用不同的 seed 生成
-    aclError result1 = _aclrandStatelessRandomUniformV2(11111, offset, alg, output1.data(), n, ACL_FLOAT);
-    aclError result2 = _aclrandStatelessRandomUniformV2(22222, offset, alg, output2.data(), n, ACL_FLOAT);
+    aclError result1 = _aclrandStatelessRandomUniformV2(11111, offset, alg, output1.data(), n, ACL_FLOAT, stream);
+    aclError result2 = _aclrandStatelessRandomUniformV2(22222, offset, alg, output2.data(), n, ACL_FLOAT, stream);
 
     TEST_ASSERT(stats, result1 == ACL_SUCCESS, "first call failed");
     TEST_ASSERT(stats, result2 == ACL_SUCCESS, "second call failed");
@@ -155,8 +155,8 @@ void test_different_offsets(aclrtStream stream, OpsRandTest::TestStats& stats)
     std::vector<float> output2(n);
 
     // 使用相同的 seed 但不同的 offset 生成
-    aclError result1 = _aclrandStatelessRandomUniformV2(seed, 0, alg, output1.data(), n, ACL_FLOAT);
-    aclError result2 = _aclrandStatelessRandomUniformV2(seed, 100, alg, output2.data(), n, ACL_FLOAT);
+    aclError result1 = _aclrandStatelessRandomUniformV2(seed, 0, alg, output1.data(), n, ACL_FLOAT, stream);
+    aclError result2 = _aclrandStatelessRandomUniformV2(seed, 100, alg, output2.data(), n, ACL_FLOAT, stream);
 
     TEST_ASSERT(stats, result1 == ACL_SUCCESS, "first call failed");
     TEST_ASSERT(stats, result2 == ACL_SUCCESS, "second call failed");
@@ -185,7 +185,7 @@ void test_float16_type(aclrtStream stream, OpsRandTest::TestStats& stats)
     int32_t alg = 1;
     std::vector<uint16_t> output(n);
 
-    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, output.data(), n, ACL_FLOAT16);
+    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, output.data(), n, ACL_FLOAT16, stream);
 
     TEST_ASSERT(stats, result == ACL_SUCCESS, "return code failed");
 
@@ -213,7 +213,7 @@ void test_bfloat16_type(aclrtStream stream, OpsRandTest::TestStats& stats)
     int32_t alg = 1;
     std::vector<uint16_t> output(n);
 
-    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, output.data(), n, ACL_BF16);
+    aclError result = _aclrandStatelessRandomUniformV2(seed, offset, alg, output.data(), n, ACL_BF16, stream);
 
     TEST_ASSERT(stats, result == ACL_SUCCESS, "return code failed");
 
