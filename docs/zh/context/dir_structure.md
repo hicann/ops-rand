@@ -94,9 +94,11 @@ ${op_name}/                              # 算子名的小写下划线形式
 ├── ${op_name}.cpp                       # Kernel入口文件，包含主函数和调度逻辑
 ├── arch35/                              # Ascend950特有实现
 │   └── ${op_name}.h                     # Kernel实现头文件
-└── tests/                               # 测试用例目录
-    ├── CMakeLists.txt
-    └── test_${op_name}_example.cpp      # 算子测试用例
+└── tests/                               # 测试用例目录（可选）
+    └── ${op_name}_test.cpp              # 算子测试用例
 ```
 
-> **说明**：不同算子的交付件可能有差异，请以实际目录为准。
+> **说明**：
+> - 测试文件命名规范为 `${op_name}_test.cpp`（例如 `stateless_random_uniform_v2_test.cpp`）
+> - `tests/` 目录下可能没有独立的 `CMakeLists.txt`，测试编译配置通常在算子目录的 `CMakeLists.txt` 中
+> - 不同算子的交付件可能有差异，请以实际目录为准

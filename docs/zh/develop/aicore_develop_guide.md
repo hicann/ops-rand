@@ -68,14 +68,19 @@ aclError _aclrandStatelessRandomUniformV2(
     uint64_t seed,
     uint64_t offset,
     int32_t alg,
-    float *output,
-    uint64_t n
+    void *output,
+    uint64_t n,
+    int32_t dtype
 );
 
 #ifdef __cplusplus
 }
 #endif
 ```
+
+> **说明**：
+> - `output` 参数类型为 `void*`，实际数据类型由 `dtype` 参数决定
+> - `dtype` 参数：0=FP32, 1=FP16, 2=BF16
 
 ## Tiling实现
 
@@ -90,6 +95,7 @@ aclError _aclrandStatelessRandomUniformV2(
 ```cpp
 // stateless_random_uniform_v2.h
 struct StatelessRandomUniformV2TilingData {
+    uint32_t tilingKey;          // Tiling标识，用于区分不同场景
     uint32_t blockNum;           // 核数
     uint32_t blockTilingSize;    // 每个核处理的数据量
     uint32_t tailBlockTilingSize; // 尾核处理的数据量
@@ -99,6 +105,8 @@ struct StatelessRandomUniformV2TilingData {
     uint32_t counter[4];         // Philox算法计数器（来自offset）
 };
 ```
+
+> **说明**：`tilingKey` 字段用于标识不同的 Tiling 场景，便于在 Kernel 中根据场景选择不同的处理逻辑。
 
 ### Tiling策略计算
 

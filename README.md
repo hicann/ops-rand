@@ -37,13 +37,12 @@ ops-rand是[CANN](https://hiascend.com/software/cann) （Compute Architecture fo
 关键目录如下，详细目录介绍参见[项目目录](./docs/zh/context/dir_structure.md)。
 ```
 ├── cmake                          # 项目工程编译目录
-├── common                         # 项目公共头文件和公共源码
 ├── docs                           # 项目文档介绍
-├── examples                       # 端到端算子开发和调用示例
 ├── include                        # 头文件目录
 ├── lib                            # Generator API 实现代码
 ├── src                            # 源码目录
 │   ├── stateless_random_uniform_v2 # 无状态均匀分布随机数算子
+│   ├── common                     # 算子公共代码
 │   ├── internal                   # 内部实现头文件
 │   └── CMakeLists.txt             # 算子编译配置文件
 ├── scripts                        # 脚本目录，包含自定义算子、kernel构建相关配置文件

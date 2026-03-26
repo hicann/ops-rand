@@ -2,7 +2,78 @@
 
 ---
 
-## 一、Phase 2：分布扩展 API
+## Phase 1：已实现 API
+
+以下 API 已在 Phase 1 中实现，可在当前版本中使用：
+
+### 基础 API
+
+| API | 说明 | 状态 |
+|-----|------|:----:|
+| `aclrandGetVersion` | 获取库版本号 | ✅ |
+| `aclrandCreateGenerator` | 创建随机数生成器 | ✅ |
+| `aclrandSetGeneratorSeed` | 设置生成器种子 | ✅ |
+| `aclrandSetGeneratorOffset` | 设置生成器偏移量 | ✅ |
+| `aclrandSetGeneratorStream` | 设置生成器流 | ✅ |
+| `aclrandDestroyGenerator` | 销毁生成器 | ✅ |
+| `aclrandGenerateUniform` | 生成单精度均匀分布随机数 | ✅ |
+
+### 错误码定义
+
+```cpp
+typedef enum {
+    /* 成功 */
+    ACLRAND_STATUS_SUCCESS = 0,                      // 操作成功
+
+    /* 参数/状态错误 (100系列) - 调用方可检测的问题 */
+    ACLRAND_STATUS_VERSION_MISMATCH = 100,           // 头文件与库版本不匹配
+    ACLRAND_STATUS_NOT_INITIALIZED = 101,            // 库未初始化
+    ACLRAND_STATUS_ALLOCATION_FAILED = 102,          // 内存分配失败
+    ACLRAND_STATUS_TYPE_ERROR = 103,                 // RNG类型不支持
+    ACLRAND_STATUS_OUT_OF_RANGE = 104,               // 参数超出有效范围
+    ACLRAND_STATUS_LENGTH_NOT_MULTIPLE = 105,        // 输出长度不符合要求
+    ACLRAND_STATUS_DOUBLE_PRECISION_REQUIRED = 106,  // 设备不支持双精度
+
+    /* 运行时错误 (200系列) - 执行环境问题 */
+    ACLRAND_STATUS_LAUNCH_FAILURE = 201,             // Kernel启动失败
+    ACLRAND_STATUS_PREEXISTING_FAILURE = 202,        // 设备上存在已有错误
+    ACLRAND_STATUS_INITIALIZATION_FAILED = 203,      // 初始化失败
+    ACLRAND_STATUS_ARCH_MISMATCH = 204,              // 架构不匹配
+
+    /* 内部错误 */
+    ACLRAND_STATUS_INTERNAL_ERROR = 999,             // 内部错误
+
+    /* 扩展错误码 */
+    ACLRAND_STATUS_NOT_IMPLEMENTED = 1000,           // 功能尚未实现
+} aclrandStatus_t;
+```
+
+### RNG 类型枚举
+
+```cpp
+typedef enum {
+    // 伪随机生成器 (100-199)
+    ACLRAND_RNG_PSEUDO_DEFAULT = 100,       // 默认伪随机算法（当前为Philox）
+    ACLRAND_RNG_PSEUDO_XORWOW = 101,        // XORWOW算法（计划中）
+    ACLRAND_RNG_PSEUDO_MRG32K3A = 102,      // MRG32K3A算法（计划中）
+    ACLRAND_RNG_PSEUDO_MTGP32 = 103,        // MTGP32算法（计划中）
+    ACLRAND_RNG_PSEUDO_PHILOX4_32_10 = 104, // Philox 4x32算法（已实现）
+    ACLRAND_RNG_PSEUDO_MT19937 = 105,       // Mersenne Twister算法（计划中）
+
+    // 准随机生成器 (200-299)
+    ACLRAND_RNG_QUASI_DEFAULT = 200,        // 默认准随机算法（计划中）
+    ACLRAND_RNG_QUASI_SOBOL32 = 201,        // 32位Sobol序列（计划中）
+    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL32 = 202, // Scrambled Sobol32（计划中）
+    ACLRAND_RNG_QUASI_SOBOL64 = 203,        // 64位Sobol序列（计划中）
+    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL64 = 204, // Scrambled Sobol64（计划中）
+} aclrandRngType_t;
+```
+
+> **说明**：当前版本仅 `ACLRAND_RNG_PSEUDO_DEFAULT` 和 `ACLRAND_RNG_PSEUDO_PHILOX4_32_10` 完全支持，其他类型在调用生成函数时会返回 `ACLRAND_STATUS_TYPE_ERROR`。
+
+---
+
+## 一、Phase 2：分布扩展 API（计划中）
 
 ### 1.1 扩展数据类型 - Uniform 分布
 
@@ -329,23 +400,20 @@ aclrandStatus_t aclrandGenerateDiscrete(
 
 ```cpp
 typedef enum {
-    // 已实现 (Phase 1)
-    ACLRAND_RNG_PSEUDO_DEFAULT = 0,
-    ACLRAND_RNG_PSEUDO_PHILOX4_32_10 = 100,
+    // 伪随机生成器 (100-199)
+    ACLRAND_RNG_PSEUDO_DEFAULT = 100,       // 默认伪随机算法
+    ACLRAND_RNG_PSEUDO_XORWOW = 101,        // XORWOW算法（Phase 3 计划中）
+    ACLRAND_RNG_PSEUDO_MRG32K3A = 102,      // MRG32K3A算法（Phase 3 计划中）
+    ACLRAND_RNG_PSEUDO_MTGP32 = 103,        // MTGP32算法（Phase 3 计划中）
+    ACLRAND_RNG_PSEUDO_PHILOX4_32_10 = 104, // Philox 4x32算法（已实现）
+    ACLRAND_RNG_PSEUDO_MT19937 = 105,       // Mersenne Twister算法（Phase 3 计划中）
 
-    // Phase 3 新增
-    ACLRAND_RNG_PSEUDO_XORWOW = 101,
-    ACLRAND_RNG_PSEUDO_MRG32K3A = 102,
-    ACLRAND_RNG_PSEUDO_MTGP32 = 103,
-    ACLRAND_RNG_PSEUDO_LFSR113 = 104,
-    ACLRAND_RNG_PSEUDO_THREEFRY2_32_20 = 105,
-
-    // 准随机生成器
-    ACLRAND_RNG_QUASI_SOBOL32 = 200,
-    ACLRAND_RNG_QUASI_SOBOL64 = 201,
-    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL32 = 202,
-    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL64 = 203,
-
+    // 准随机生成器 (200-299)
+    ACLRAND_RNG_QUASI_DEFAULT = 200,        // 默认准随机算法
+    ACLRAND_RNG_QUASI_SOBOL32 = 201,        // 32位Sobol序列（Phase 3 计划中）
+    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL32 = 202, // Scrambled Sobol32（Phase 3 计划中）
+    ACLRAND_RNG_QUASI_SOBOL64 = 203,        // 64位Sobol序列（Phase 3 计划中）
+    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL64 = 204, // Scrambled Sobol64（Phase 3 计划中）
 } aclrandRngType_t;
 ```
 
@@ -544,20 +612,26 @@ aclrandStatus_t aclrandSetOrdering(
 ```cpp
 typedef enum {
     // Phase 1 已定义
-    ACLRAND_STATUS_SUCCESS = 0,
-    ACLRAND_STATUS_VERSION_MISMATCH = 100,
-    ACLRAND_STATUS_NOT_CREATED = 101,
-    ACLRAND_STATUS_ALLOCATION_FAILED = 102,
-    ACLRAND_STATUS_TYPE_ERROR = 103,
-    ACLRAND_STATUS_OUT_OF_RANGE = 104,
+    ACLRAND_STATUS_SUCCESS = 0,                      // 操作成功
+    ACLRAND_STATUS_VERSION_MISMATCH = 100,           // 头文件与库版本不匹配
+    ACLRAND_STATUS_NOT_INITIALIZED = 101,            // 库未初始化
+    ACLRAND_STATUS_ALLOCATION_FAILED = 102,          // 内存分配失败
+    ACLRAND_STATUS_TYPE_ERROR = 103,                 // RNG类型不支持
+    ACLRAND_STATUS_OUT_OF_RANGE = 104,               // 参数超出有效范围
+    ACLRAND_STATUS_LENGTH_NOT_MULTIPLE = 105,        // 输出长度不符合要求
+    ACLRAND_STATUS_DOUBLE_PRECISION_REQUIRED = 106,  // 设备不支持双精度
 
-    // Phase 2+ 新增
-    ACLRAND_STATUS_LAUNCH_FAILURE = 105,    // Kernel 启动失败
-    ACLRAND_STATUS_NOT_INITIALIZED = 106,   // 未初始化
-    ACLRAND_STATUS_ARCH_MISMATCH = 107,     // 架构不匹配
-    ACLRAND_STATUS_INTERNAL_ERROR = 108,    // 内部错误
-    ACLRAND_STATUS_NOT_IMPLEMENTED = 109,   // 功能未实现
+    // 运行时错误 (200系列)
+    ACLRAND_STATUS_LAUNCH_FAILURE = 201,             // Kernel启动失败
+    ACLRAND_STATUS_PREEXISTING_FAILURE = 202,        // 设备上存在已有错误
+    ACLRAND_STATUS_INITIALIZATION_FAILED = 203,      // 初始化失败
+    ACLRAND_STATUS_ARCH_MISMATCH = 204,              // 架构不匹配
 
+    // 内部错误
+    ACLRAND_STATUS_INTERNAL_ERROR = 999,             // 内部错误
+
+    // 扩展错误码
+    ACLRAND_STATUS_NOT_IMPLEMENTED = 1000,           // 功能未实现
 } aclrandStatus_t;
 ```
 

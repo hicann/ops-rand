@@ -77,7 +77,7 @@ typedef enum
  *
  * Defines supported pseudo-random and quasi-random number generator algorithms.
  *
- * Pseudo-random generators (0-99):
+ * Pseudo-random generators (100-199):
  *   - DEFAULT: Default algorithm (currently Philox)
  *   - XORWOW: XORWOW algorithm (pending)
  *   - MRG32K3A: MRG32K3A algorithm (pending)
@@ -85,7 +85,7 @@ typedef enum
  *   - PHILOX4_32_10: Philox 4x32 algorithm with 10 rounds (implemented)
  *   - MT19937: Mersenne Twister algorithm (pending)
  *
- * Quasi-random generators (100-199):
+ * Quasi-random generators (200-299):
  *   - SOBOL32: 32-bit Sobol sequence (pending)
  *   - SCRAMBLED_SOBOL32: Scrambled Sobol32 (pending)
  *   - SOBOL64: 64-bit Sobol sequence (pending)
@@ -93,17 +93,17 @@ typedef enum
  */
 typedef enum
 {
-    ACLRAND_RNG_PSEUDO_DEFAULT = 0,       /**< Default pseudo-random algorithm */
-    ACLRAND_RNG_PSEUDO_XORWOW = 1,        /**< XORWOW algorithm */
-    ACLRAND_RNG_PSEUDO_MRG32K3A = 2,      /**< MRG32K3A algorithm */
-    ACLRAND_RNG_PSEUDO_MTGP32 = 3,        /**< MTGP32 algorithm */
-    ACLRAND_RNG_PSEUDO_PHILOX4_32_10 = 4, /**< Philox 4x32 algorithm with 10 rounds */
-    ACLRAND_RNG_PSEUDO_MT19937 = 5,       /**< Mersenne Twister algorithm */
-    ACLRAND_RNG_QUASI_DEFAULT = 100,      /**< Default quasi-random algorithm */
-    ACLRAND_RNG_QUASI_SOBOL32 = 101,      /**< 32-bit Sobol sequence */
-    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL32 = 102, /**< Scrambled Sobol32 */
-    ACLRAND_RNG_QUASI_SOBOL64 = 103,      /**< 64-bit Sobol sequence */
-    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL64 = 104, /**< Scrambled Sobol64 */
+    ACLRAND_RNG_PSEUDO_DEFAULT = 100,       /**< Default pseudo-random algorithm */
+    ACLRAND_RNG_PSEUDO_XORWOW = 101,        /**< XORWOW algorithm */
+    ACLRAND_RNG_PSEUDO_MRG32K3A = 102,      /**< MRG32K3A algorithm */
+    ACLRAND_RNG_PSEUDO_MTGP32 = 103,        /**< MTGP32 algorithm */
+    ACLRAND_RNG_PSEUDO_PHILOX4_32_10 = 104, /**< Philox 4x32 algorithm with 10 rounds */
+    ACLRAND_RNG_PSEUDO_MT19937 = 105,       /**< Mersenne Twister algorithm */
+    ACLRAND_RNG_QUASI_DEFAULT = 200,        /**< Default quasi-random algorithm */
+    ACLRAND_RNG_QUASI_SOBOL32 = 201,        /**< 32-bit Sobol sequence */
+    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL32 = 202, /**< Scrambled Sobol32 */
+    ACLRAND_RNG_QUASI_SOBOL64 = 203,        /**< 64-bit Sobol sequence */
+    ACLRAND_RNG_QUASI_SCRAMBLED_SOBOL64 = 204, /**< Scrambled Sobol64 */
 } aclrandRngType_t;
 
 /**
