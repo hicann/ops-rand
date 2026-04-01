@@ -29,7 +29,7 @@
 
    单击[下载链接](https://www.hiascend.com/hardware/firmware-drivers/community)，根据实际产品型号和环境架构，获取对应的`Ascend-hdk-<chip_type>-npu-driver_<version>_linux-<arch>.run`、`Ascend-hdk-<chip_type>-npu-firmware_<version>.run`包。
 
-   安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
+   安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstWizard)》。
 
 ## 环境准备（二选一）
 
@@ -83,7 +83,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
     根据实际产品型号和环境架构，获取对应的`Ascend-cann-toolkit_${cann_version}_linux-${arch}.run`包。
 
-    Ascend 950系列产品：单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/9.0.0-alpha.1/)获取软件包。
+    Ascend 950系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master/)，选择最新时间版本，并根据产品型号和环境架构下载对应包。
 
     ```bash
     # 确保安装包具有可执行权限
@@ -101,7 +101,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
     根据实际产品型号和环境架构，获取对应的`Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run`包。
 
-    Ascend 950系列产品：单击[下载链接](https://mirror-centralrepo.devcloud.cn-north-4.huaweicloud.com/artifactory/cann-run-release/software/9.0.0-alpha.1/)获取软件包。
+    Ascend 950系列产品：单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master/)，选择最新时间版本，并根据产品型号和环境架构下载对应包。
 
     ```bash
     # 确保安装包具有可执行权限

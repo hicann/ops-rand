@@ -73,9 +73,15 @@ Build package success: build_out/cann-950-ops-rand_9.0.0_linux-x86_64.run
 
 ### 3. 安装ops-rand算子包
 ```bash
-./build_out/cann-950-ops-rand_*linux*.run
+./build_out/cann-${soc_name}-ops-rand_${cann_version}_linux-${arch}.run --full --install-path=${install_path}
 ```
-ops-rand安装在`${ASCEND_HOME_PATH}/cann`路径中，`${ASCEND_HOME_PATH}`表示CANN软件安装目录。
+
+- ${soc_name}：表示NPU型号名称，如`950`。
+- ${cann_version}：表示CANN版本号，如`9.0.0`。
+- ${arch}：表示CPU架构，如`aarch64`、`x86_64`。
+- ${install_path}：表示指定安装路径，需要与toolkit包安装在相同路径，默认安装在`/usr/local/Ascend`目录。
+
+ops-rand安装在`${install_path}/cann`路径中。
 
 ### 4. 配置环境变量
 
