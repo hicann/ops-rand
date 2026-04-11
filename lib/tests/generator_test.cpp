@@ -55,10 +55,10 @@ void test_set_seed(aclrtStream stream, OpsRandTest::TestStats& stats)
     aclrandStatus_t ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
     TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
 
-    ret = aclrandSetGeneratorSeed(generator, 12345);
+    ret = aclrandSetGeneratorSeed(generator, 12345);  // 12345为测试用的固定seed
     TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed failed");
 
-    ret = aclrandSetGeneratorSeed(nullptr, 12345);
+    ret = aclrandSetGeneratorSeed(nullptr, 12345);  // 12345为测试用的固定seed
     TEST_ASSERT(stats, ret != ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed with null should fail");
 
     ret = aclrandDestroyGenerator(generator);
@@ -76,10 +76,10 @@ void test_set_offset(aclrtStream stream, OpsRandTest::TestStats& stats)
     aclrandStatus_t ret = aclrandCreateGenerator(&generator, ACLRAND_RNG_PSEUDO_DEFAULT);
     TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
 
-    ret = aclrandSetGeneratorOffset(generator, 100);
+    ret = aclrandSetGeneratorOffset(generator, 100);  // 100为测试用的固定offset
     TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset failed");
 
-    ret = aclrandSetGeneratorOffset(nullptr, 100);
+    ret = aclrandSetGeneratorOffset(nullptr, 100);  // 100为测试用的固定offset
     TEST_ASSERT(stats, ret != ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset with null should fail");
 
     ret = aclrandDestroyGenerator(generator);
@@ -131,7 +131,7 @@ void test_generate_uniform(aclrtStream stream, OpsRandTest::TestStats& stats)
     TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
 
     // Set parameters
-    ret = aclrandSetGeneratorSeed(generator, 12345);
+    ret = aclrandSetGeneratorSeed(generator, 12345);  // 12345为测试用的固定seed
     TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed failed");
 
     ret = aclrandSetGeneratorOffset(generator, 0);
@@ -175,7 +175,7 @@ void test_generate_uniform_null(aclrtStream stream, OpsRandTest::TestStats& stat
     TEST_ASSERT(stats, status != ACLRAND_STATUS_SUCCESS, "aclrandGenerateUniform with null generator ptr should fail");
 
     // Null output
-    status = aclrandGenerateUniform(generator, nullptr, 10);
+    status = aclrandGenerateUniform(generator, nullptr, 10);  // 10为要生成的随机数个数
     TEST_ASSERT(stats, status != ACLRAND_STATUS_SUCCESS, "aclrandGenerateUniform with null output should fail");
 
     // Zero size

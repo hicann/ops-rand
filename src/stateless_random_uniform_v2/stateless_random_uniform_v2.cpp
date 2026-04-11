@@ -30,6 +30,7 @@ constexpr uint32_t BFLOAT16_TILING_KEY = 103;
 constexpr uint32_t CORE_ALIGN_SIZE = 512;
 constexpr uint32_t MIN_TILING_SIZE = 256;
 constexpr uint32_t BLOCK_SIZE_BYTES = 32;
+constexpr uint32_t UINT32_BITS = 32;
 constexpr uint32_t UB_DIVISOR = 4;  // UB size divisor for tiling calculation
 
 template <typename T1, typename T2>
@@ -114,12 +115,13 @@ void PackSeedAndOffset(
 {
     tilingData.alg = alg;
     tilingData.tilingKey = tilingKey;
+    // Philox算法使用128位counter(4×32位)，offset仅64位，高64位填0
     tilingData.counter[0] = static_cast<uint32_t>(offset);
-    tilingData.counter[1] = static_cast<uint32_t>(offset >> 32);
-    tilingData.counter[2] = 0;
-    tilingData.counter[3] = 0;
+    tilingData.counter[1] = static_cast<uint32_t>(offset >> UINT32_BITS);
+    tilingData.counter[2] = 0;  // 2：数组下标
+    tilingData.counter[3] = 0;  // 3：数组下标
     tilingData.key[0] = static_cast<uint32_t>(seed);
-    tilingData.key[1] = static_cast<uint32_t>(seed >> 32);
+    tilingData.key[1] = static_cast<uint32_t>(seed >> UINT32_BITS); 
 }
 } // namespace
 
