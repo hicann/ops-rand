@@ -7,31 +7,116 @@
 
 ops-rand是[CANN](https://hiascend.com/software/cann) （Compute Architecture for Neural Networks）算子库中提供的随机数生成库。
 
-## 📝版本配套
+### 主要特性
 
-本项目源码会跟随CANN软件版本发布，关于CANN软件版本与本项目标签的对应关系请参阅[release仓库](https://gitcode.com/cann/release-management)中的相应版本说明。
-请注意，为确保您的源码定制开发顺利进行，请选择配套的CANN版本与Gitcode标签源码，使用master分支可能存在版本不匹配的风险。
+- ✅ **模块化设计** - 支持动态添加算子模块，每个算子独立开发、编译和测试
+- ✅ **标准 CMake 构建** - 跨平台编译支持，统一的构建流程
+- ✅ **完整测试体系** - 基于自定义测试框架，支持自动化测试和超时控制
+- ✅ **便捷打包** - 一键生成 .run 安装包，支持 install/uninstall/upgrade
+- ✅ **版本管理** - 安装信息记录和版本追踪，支持升级管理
+- ✅ **轻量高效** - 简洁的架构设计，避免过度工程化
 
-## ⚡️快速入门
+## 📝 版本配套
 
-若您希望**从零到一了解并快速体验项目**，请访问如下文档。可以先了解项目算子信息，再尝试算子调用、开发、贡献等操作。
+当前仓库已验证通过的 CANN Toolkit 如下：
 
-1. [算子列表](docs/zh/op_list.md)：项目全量算子信息，方便快速查询。
+| CANN 版本 | 发布时间 | 分支 |
+| --- | --- | --- |
+| [CANN 9.0.0-beta.2](https://www.hiascend.com/developer/download/community/result?module=cann&cann=9.0.0-beta.2) | `2026/03/30` | master |
 
-2. [QuickStart](QUICKSTART.md)：端到端快速上手指南，包括搭建环境、编译部署、算子调用/开发/调试调优、贡献等过程。
+请根据实际 CPU 架构，从上述链接目录中自行选择对应的 `.run` 安装包。
 
-## 📖学习教程
+toolkit 安装包文件名格式如下：
 
-若您**已完成快速入门**学习，对本项目有了一定认知，并希望**深入了解和体验项目**，请访问如下文档。
+- `Ascend-cann-toolkit_${cann_version}_linux-aarch64.run`
+- `Ascend-cann-toolkit_${cann_version}_linux-x86_64.run`
 
-这些文档提供了多样化的场景介绍和更全面的操作指导，方便您应用于各种AI业务场景。
+1. **安装社区版 CANN Toolkit**
 
-1. [环境部署](docs/zh/context/quick_install.md)：搭建基础环境的指南，提供了多种场景下第三方依赖和软件包安装方法等。
-2. [算子调用](docs/zh/invocation/quick_op_invocation.md)：编译部署并调用算子的指南，提供了多种编译算子包以及运行算子的方法（包括执行算子样例和UT）等。
-3. [算子开发](docs/zh/develop/aicore_develop_guide.md)：基于本项目工程开发新算子的指南，提供了创建算子工程、实现Tiling和Kernel核心交付件等指导。
-4. [算子调试调优](docs/zh/debug/op_debug_prof.md)：提供了常见的算子调试和调优方法，如DumpTensor、msProf、Simulator等。
+    ```bash
+    # 确保安装包具有可执行权限
+    chmod +x Ascend-cann-toolkit_${cann_version}_linux-${arch}.run
+    # 安装命令
+    ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --force --install-path=${install_path}
+    ```
+    - `${cann_version}`：表示 toolkit 安装包版本号，需满足上文的最低版本要求。
+    - `${arch}`：表示 CPU 架构，如 `aarch64`、`x86_64`。
+    - `${install_path}`：表示指定安装路径，默认安装在 `/usr/local/Ascend` 目录。
 
-除了上述指南，还提供了其他文档介绍，例如算子调用方式和流程、算子基本概念等，全量文档介绍请访问[docs](docs/README.md)。
+2. **配置环境变量**
+
+   安装完成后，请先执行：
+
+    ```bash
+    source ${install_path}/cann/set_env.sh
+    ```
+
+   请将 `${install_path}` 替换为 toolkit 的实际安装目录，例如 `/usr/local/Ascend` 或 `${HOME}/Ascend`。
+
+## ⚡️ 快速入门
+
+### 编译与测试
+
+详细的 build.sh 参数说明请参考 [build 参数说明](docs/zh/context/build.md)。
+
+```bash
+# 编译所有算子（默认 8 线程）
+./build.sh
+
+# 编译指定算子
+./build.sh --ops=stateless_random_uniform_v2
+
+# 编译并运行测试
+./build.sh --run
+
+# 编译并打包成 .run 文件
+./build.sh --pkg
+
+# 查看完整帮助信息
+./build.sh --help
+```
+
+### 安装
+
+```bash
+# 标准安装（需要 root 权限）
+sudo ./cann-950-ops-rand_9.0.0_linux-*.run
+
+# 查看安装包信息
+./cann-950-ops-rand_9.0.0_linux-*.run --help
+
+# 安装到自定义路径
+sudo ./cann-950-ops-rand_9.0.0_linux-*.run --install-path=/opt/ascend
+
+# 卸载
+sudo ./cann-950-ops-rand_9.0.0_linux-*.run --uninstall
+
+# 升级
+sudo ./cann-950-ops-rand_9.0.0_linux-*.run --upgrade
+```
+
+## 📖 项目说明
+
+### 支持的算子
+
+当前支持的算子列表：
+
+| 算子名称 | 描述 | 状态 |
+|---------|------|------|
+| [StatelessRandomUniformV2](src/stateless_random_uniform_v2/) | 生成无状态的均匀分布随机数，给定种子可复现结果 | ✅ 已实现 |
+
+更多算子正在持续开发中...
+
+### SoC 支持矩阵
+
+| SoC 型号 | SOC_VERSION | 支持状态 |
+|---------|-------------|---------|
+| Ascend950 | ascend950dt_9595 | ✅ 默认支持 |
+| Ascend910B | ascend910b3 | ❌ 暂不支持 |
+| Ascend910_93 | ascend910_93 | ❌ 暂不支持 |
+| Ascend910 | ascend910 | ❌ 暂不支持 |
+| Ascend310P | ascend310p | ❌ 暂不支持 |
+| Ascend310B | ascend310b | ❌ 暂不支持 |
 
 ## 🔍目录结构
 关键目录如下，详细目录介绍参见[项目目录](./docs/zh/context/dir_structure.md)。
@@ -53,6 +138,15 @@ ops-rand是[CANN](https://hiascend.com/software/cann) （Compute Architecture fo
 ├── install_deps.sh                # 安装依赖包脚本
 └── requirements.txt               # 项目需要的第三方依赖包
 ```
+## 📖学习教程
+
+若您**已完成快速入门**学习，对本项目有了一定认知，并希望**深入了解和体验项目**，请访问如下文档。
+
+这些文档提供了多样化的场景介绍和更全面的操作指导，方便您应用于各种AI业务场景。
+
+1. [算子调用](docs/zh/invocation/quick_op_invocation.md)：编译部署并调用算子的指南，提供了多种编译算子包以及运行算子的方法（包括执行算子样例和UT）等。
+2. [算子开发](docs/zh/develop/aicore_develop_guide.md)：基于本项目工程开发新算子的指南，提供了创建算子工程、实现Tiling和Kernel核心交付件等指导。
+3. [算子调试调优](docs/zh/debug/op_debug_prof.md)：提供了常见的算子调试和调优方法，如DumpTensor、msProf、Simulator等。
 
 ## 💬相关信息
 
