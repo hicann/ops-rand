@@ -31,7 +31,10 @@ constexpr uint32_t CORE_ALIGN_SIZE = 512;
 constexpr uint32_t MIN_TILING_SIZE = 256;
 constexpr uint32_t BLOCK_SIZE_BYTES = 32;
 constexpr uint32_t UINT32_BITS = 32;
-constexpr uint32_t UB_DIVISOR = 4;  // UB size divisor for tiling calculation
+constexpr uint32_t UB_DIVISOR = 4; // UB size divisor for tiling calculation
+// Upper bound of output elements: prevents excessive device memory allocation (DoS)
+// and keeps every offset/product in the tiling chain safely within 64-bit range
+constexpr uint64_t MAX_OUTPUT_ELEMENTS = 1024ULL * 1024ULL * 1024ULL; // 1G elements
 
 template <typename T1, typename T2>
 inline T1 CeilDiv(const T1 a, const T2 b)
@@ -71,31 +74,40 @@ aclError GetDtypeInfo(aclDataType dtype, uint32_t& dtypeSize, uint32_t& tilingKe
 
 /**
  * @brief Calculate tiling parameters for the kernel
- * @param outputSize Total output size in bytes
+ * @param numOfOutput Total number of output elements
  * @param dtypeSize Size of each element in bytes
  * @param platform AscendC platform instance
  * @param tilingData Output: calculated tiling parameters
+ * @return ACL_SUCCESS on success, ACL_ERROR_INVALID_PARAM if the output size
+ *         exceeds the addressing range of uint32 tiling fields
  */
-void CalcTilingData(
-    size_t outputSize,
-    uint32_t dtypeSize,
-    platform_ascendc::PlatformAscendC* platform,
+aclError CalcTilingData(
+    uint64_t numOfOutput, uint32_t dtypeSize, platform_ascendc::PlatformAscendC* platform,
     StatelessRandomUniformV2TilingData& tilingData)
 {
     auto coreNum = platform->GetCoreNumAiv();
+    // All block-level tiling fields below are in ELEMENT count (not bytes),
+    // consistent with how the kernel consumes them
     auto coreAlignFactor = CORE_ALIGN_SIZE / dtypeSize;
-    auto blockFactor = CeilDiv(outputSize, coreNum);
+    auto blockFactor = CeilDiv(numOfOutput, coreNum);
     auto blockAlignFactor = CeilDiv(blockFactor, coreAlignFactor) * coreAlignFactor;
 
+    // Guard against truncation: elements handled by a single block must fit uint32_t
+    if (blockAlignFactor > UINT32_MAX) {
+        return ACL_ERROR_INVALID_PARAM;
+    }
     tilingData.blockTilingSize = std::max(static_cast<uint32_t>(blockAlignFactor), MIN_TILING_SIZE);
-    tilingData.blockNum = CeilDiv(outputSize, tilingData.blockTilingSize);
-    tilingData.tailBlockTilingSize = outputSize - tilingData.blockTilingSize * (tilingData.blockNum - 1);
+    tilingData.blockNum = CeilDiv(numOfOutput, tilingData.blockTilingSize);
+    // 64-bit intermediate to avoid uint32_t overflow of blockTilingSize * (blockNum - 1)
+    uint64_t processedSize = static_cast<uint64_t>(tilingData.blockTilingSize) * (tilingData.blockNum - 1);
+    tilingData.tailBlockTilingSize = static_cast<uint32_t>(numOfOutput - processedSize);
 
     uint64_t ubSize = 0;
     platform->GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     auto quarterUbSize = ubSize / UB_DIVISOR;
     auto alignFactor = BLOCK_SIZE_BYTES / dtypeSize;
     tilingData.ubTilingSize = CeilDiv(quarterUbSize / dtypeSize, alignFactor) * alignFactor;
+    return ACL_SUCCESS;
 }
 
 /**
@@ -107,21 +119,17 @@ void CalcTilingData(
  * @param tilingData Output: tiling data with packed values
  */
 void PackSeedAndOffset(
-    uint64_t seed,
-    uint64_t offset,
-    int32_t alg,
-    uint32_t tilingKey,
-    StatelessRandomUniformV2TilingData& tilingData)
+    uint64_t seed, uint64_t offset, int32_t alg, uint32_t tilingKey, StatelessRandomUniformV2TilingData& tilingData)
 {
     tilingData.alg = alg;
     tilingData.tilingKey = tilingKey;
     // Philox算法使用128位counter(4×32位)，offset仅64位，高64位填0
     tilingData.counter[0] = static_cast<uint32_t>(offset);
     tilingData.counter[1] = static_cast<uint32_t>(offset >> UINT32_BITS);
-    tilingData.counter[2] = 0;  // 2：数组下标
-    tilingData.counter[3] = 0;  // 3：数组下标
+    tilingData.counter[2] = 0; // 2：数组下标
+    tilingData.counter[3] = 0; // 3：数组下标
     tilingData.key[0] = static_cast<uint32_t>(seed);
-    tilingData.key[1] = static_cast<uint32_t>(seed >> UINT32_BITS); 
+    tilingData.key[1] = static_cast<uint32_t>(seed >> UINT32_BITS);
 }
 } // namespace
 
@@ -161,34 +169,59 @@ extern "C" aclError _aclrandStatelessRandomUniformV2(
         return ret;
     }
 
-    // 3. Allocate device memory
+    // 3. Validate output size: upper bound prevents excessive device memory
+    //    allocation (DoS), overflow check keeps n * dtypeSize from wrapping around
+    if (n > MAX_OUTPUT_ELEMENTS || n > SIZE_MAX / dtypeSize) {
+        return ACL_ERROR_INVALID_PARAM;
+    }
+
+    // 4. Allocate device memory
     size_t outputSize = static_cast<size_t>(n) * dtypeSize;
     void* devOut = nullptr;
     if (aclrtMalloc(&devOut, outputSize, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
         return ACL_ERROR;
     }
 
-    // 4. Calculate tiling parameters
+    // 5. Calculate tiling parameters (in element count)
     auto platform = platform_ascendc::PlatformAscendCManager::GetInstance();
     if (platform == nullptr) {
         aclrtFree(devOut);
         return ACL_ERROR;
     }
     StatelessRandomUniformV2TilingData tilingData;
-    CalcTilingData(outputSize, dtypeSize, platform, tilingData);
+    ret = CalcTilingData(n, dtypeSize, platform, tilingData);
+    if (ret != ACL_SUCCESS) {
+        aclrtFree(devOut);
+        return ret;
+    }
     PackSeedAndOffset(seed, offset, alg, tilingKey, tilingData);
 
-    // 5. Launch kernel
+    // 6. Launch kernel
     stateless_random_uniform_v2<<<tilingData.blockNum, nullptr, stream>>>(
         reinterpret_cast<uint8_t*>(devOut), tilingData);
 
-    // 6. Copy result back to host
+    // 7. Wait for the kernel before copying back: the synchronous aclrtMemcpy is
+    //    not ordered with respect to tasks on `stream`; copying earlier would race
+    //    with the kernel and read uninitialized device memory
+    if (stream != nullptr) {
+        if (aclrtSynchronizeStream(stream) != ACL_SUCCESS) {
+            aclrtFree(devOut);
+            return ACL_ERROR;
+        }
+    } else {
+        if (aclrtSynchronizeDevice() != ACL_SUCCESS) {
+            aclrtFree(devOut);
+            return ACL_ERROR;
+        }
+    }
+
+    // 8. Copy result back to host
     if (aclrtMemcpy(output, outputSize, devOut, outputSize, ACL_MEMCPY_DEVICE_TO_HOST) != ACL_SUCCESS) {
         aclrtFree(devOut);
         return ACL_ERROR;
     }
 
-    // 7. Free device memory
+    // 9. Free device memory
     aclrtFree(devOut);
 
     return ACL_SUCCESS;

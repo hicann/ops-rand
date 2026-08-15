@@ -7,10 +7,13 @@ macro(init_env)
     # 1. 检查 ASCEND 环境
     _check_ascend()
 
-    # 2. 设置 NPU 架构
+    # 2. 检测 CANN 头文件布局
+    _check_cann_include_layout()
+
+    # 3. 设置 NPU 架构
     _setup_npu_arch()
 
-    # 3. 发现算子
+    # 4. 发现算子
     _discover_operators()
 endmacro()
 
@@ -29,7 +32,38 @@ macro(_check_ascend)
     message(STATUS "✓ ASCEND: ${ASCEND_HOME_PATH}")
 endmacro()
 
-# 2. 设置 NPU 架构（SoC 映射）
+# 2. 检测 CANN 公共头文件根目录
+#    兼容两种安装布局：
+#      旧布局（如 9.0.0-beta.2）：${ASCEND_HOME_PATH}/pkg_inc/
+#      新布局（如 9.1.0+）：      ${ASCEND_HOME_PATH}/${CMAKE_SYSTEM_PROCESSOR}-linux/include/
+#    通过探测 op_common/op_kernel/platform_util.h 的实际位置确定
+macro(_check_cann_include_layout)
+    set(_CANN_INC_CANDIDATES
+        "${ASCEND_HOME_PATH}/pkg_inc"
+        "${ASCEND_HOME_PATH}/${CMAKE_SYSTEM_PROCESSOR}-linux/include"
+        "${ASCEND_HOME_PATH}/include"
+    )
+    set(CANN_INC_ROOT "")
+    foreach(_cann_inc_dir IN LISTS _CANN_INC_CANDIDATES)
+        if(EXISTS "${_cann_inc_dir}/op_common/op_kernel/platform_util.h")
+            set(CANN_INC_ROOT "${_cann_inc_dir}")
+            break()
+        endif()
+    endforeach()
+    if("${CANN_INC_ROOT}" STREQUAL "")
+        message(FATAL_ERROR
+            "✗ Cannot find op_common/op_kernel/platform_util.h in CANN install: ${ASCEND_HOME_PATH}\n"
+            "  Searched:\n"
+            "    ${_CANN_INC_CANDIDATES}\n"
+            "  Please check your CANN toolkit installation."
+        )
+    endif()
+    message(STATUS "✓ CANN common headers: ${CANN_INC_ROOT}")
+    unset(_cann_inc_dir)
+    unset(_CANN_INC_CANDIDATES)
+endmacro()
+
+# 3. 设置 NPU 架构（SoC 映射）
 macro(_setup_npu_arch)
     # 映射表（注意：dav-3101 已改名为 dav-3510）
     set(SOC_TO_NPU_ARCH_MAP
@@ -57,7 +91,7 @@ macro(_setup_npu_arch)
     endif()
 endmacro()
 
-# 3. 发现算子
+# 4. 发现算子
 macro(_discover_operators)
     # 扫描 src 目录
     file(GLOB OPS RELATIVE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/*)

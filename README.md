@@ -78,21 +78,26 @@ toolkit 安装包文件名格式如下：
 
 ### 安装
 
+安装包文件名格式为 `cann-950-ops-rand_${package_version}_linux-${arch}.run`，其中：
+
+- `${package_version}`：ops-rand 软件包自身版本号（定义于仓库根目录 `version.cmake` 中 `set_package` 的 `VERSION` 字段，当前为 `9.0.0`）。**注意：该版本号与「版本配套」章节中已验证的 CANN Toolkit 版本（如 `9.0.0-beta.2`）相互独立，两者不一致属正常现象。**
+- `${arch}`：CPU 架构，如 `aarch64`、`x86_64`。
+
 ```bash
 # 标准安装（需要 root 权限）
-sudo ./cann-950-ops-rand_9.0.0_linux-*.run
+sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run
 
 # 查看安装包信息
-./cann-950-ops-rand_9.0.0_linux-*.run --help
+./cann-950-ops-rand_${package_version}_linux-${arch}.run --help
 
 # 安装到自定义路径
-sudo ./cann-950-ops-rand_9.0.0_linux-*.run --install-path=/opt/ascend
+sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run --install-path=/opt/ascend
 
 # 卸载
-sudo ./cann-950-ops-rand_9.0.0_linux-*.run --uninstall
+sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run --uninstall
 
 # 升级
-sudo ./cann-950-ops-rand_9.0.0_linux-*.run --upgrade
+sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run --upgrade
 ```
 
 ## 📖 项目说明

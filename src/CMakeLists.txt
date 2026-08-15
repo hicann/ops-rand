@@ -24,13 +24,14 @@ set_target_properties(${OPS_RAND} PROPERTIES
 )
 
 # 设置公共包含目录
+# CANN_INC_ROOT 由 cmake/init_env.cmake 自动探测（兼容旧版 pkg_inc 与新版 <arch>-linux/include 布局）
 target_include_directories(${OPS_RAND} PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
     ${ASCEND_HOME_PATH}/include               # acl.h 等核心头文件
-    ${ASCEND_HOME_PATH}/pkg_inc/op_common/    # ASCEND 公共操作（kernel_operator.h 等）
-    ${ASCEND_HOME_PATH}/pkg_inc/base/         # ASCEND 基础类型
-    ${ASCEND_HOME_PATH}/pkg_inc/              # ASCEND 头文件
+    ${CANN_INC_ROOT}/op_common/               # ASCEND 公共操作（kernel_operator.h、op_kernel 等）
+    ${CANN_INC_ROOT}/base/                    # ASCEND 基础类型
+    ${CANN_INC_ROOT}/                         # ASCEND 头文件
 )
 
 # 设置编译选项

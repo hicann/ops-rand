@@ -73,8 +73,8 @@ private:
     uint32_t tailBlockTilingSize_ = 0;
     uint32_t ubTilingSize_ = 0;
     uint32_t currUbTilingSize_ = 0;
-    uint32_t blockOffset_ = 0;
-    uint32_t currOffset_ = 0;
+    uint64_t blockOffset_ = 0;
+    uint64_t currOffset_ = 0;
     uint32_t ubLoopCnt_ = 0;
     uint32_t key_[ALG_KEY_SIZE] = {0};
     uint32_t counter_[ALG_COUNTER_SIZE] = {0};
@@ -91,7 +91,9 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Init(
 {
     ParseTilingData(tilingData);
     auto blockIdx = GetBlockIdx();
-    blockOffset_ = blockTilingSize_ * blockIdx;
+    // 64-bit multiplication: blockTilingSize_ * blockIdx may exceed uint32_t range
+    // when the total output exceeds 2^32 elements
+    blockOffset_ = static_cast<uint64_t>(blockTilingSize_) * static_cast<uint64_t>(blockIdx);
 
     if (blockIdx == blockNum_ - 1) {
         currBlockTilingSize_ = tailBlockTilingSize_;
@@ -105,8 +107,13 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Init(
 
     outputGm_.SetGlobalBuffer((__gm__ T*)y);
     pipe = pipeIn;
-    pipe->InitBuffer(outQueY_, BUFFER_NUM, ROUND_UP32(ubTilingSize_ * sizeof(T)));
-    pipe->InitBuffer(philoxQueBuf_, ROUND_UP32(ubTilingSize_ * sizeof(uint32_t)));
+    // Each PhiloxRandom call is padded up to a whole number of vector repeats
+    // (INT32_ONE_REPEAT elements) so the flat element<->counter mapping stays
+    // canonical (dst[k] <- counter base + k/4) for any tile size; buffers must
+    // hold the padded count
+    uint32_t paddedUbTilingSize = (ubTilingSize_ + INT32_ONE_REPEAT - 1) / INT32_ONE_REPEAT * INT32_ONE_REPEAT;
+    pipe->InitBuffer(outQueY_, BUFFER_NUM, ROUND_UP32(paddedUbTilingSize * sizeof(T)));
+    pipe->InitBuffer(philoxQueBuf_, ROUND_UP32(paddedUbTilingSize * sizeof(uint32_t)));
 }
 
 template <typename T>
@@ -120,15 +127,18 @@ __aicore__ inline void StatelessRandomUniformV2<T>::Process()
         if ((idx == ubLoopCnt_ - 1) && (currBlockTilingSize_ % ubTilingSize_ != 0)) {
             currUbTilingSize_ = currBlockTilingSize_ % ubTilingSize_;
         }
-        currOffset_ = blockOffset_ + idx * ubTilingSize_;
+        currOffset_ = blockOffset_ + static_cast<uint64_t>(idx) * ubTilingSize_;
         LocalTensor<uint32_t> philoxRes = philoxQueBuf_.Get<uint32_t>();
         LocalTensor<T> yOutput = outQueY_.AllocTensor<T>();
-        PhiloxRandom<10>(
-            philoxRes, {key_[0], key_[1]}, {counter_[0], counter_[1], counter_[2], counter_[3]}, currUbTilingSize_);
+        // generate a padded count (multiple of one vector repeat); only the first
+        // currUbTilingSize_ elements are converted and copied out
+        uint32_t genCount = (currUbTilingSize_ + INT32_ONE_REPEAT - 1) / INT32_ONE_REPEAT * INT32_ONE_REPEAT;
+        PhiloxRandom<10>(philoxRes, {key_[0], key_[1]}, {counter_[0], counter_[1], counter_[2], counter_[3]}, genCount);
         DataTypeHandle(yOutput, currUbTilingSize_);
         outQueY_.EnQue(yOutput);
         CopyOut();
-        groupCnt = (currUbTilingSize_ + RESULT_ELEMENT_CNT - 1) / RESULT_ELEMENT_CNT;
+        // advance the counter by the padded amount consumed by this call
+        groupCnt = genCount / RESULT_ELEMENT_CNT;
         Skip(groupCnt);
     }
 }
