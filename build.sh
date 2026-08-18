@@ -16,10 +16,11 @@ BUILD_OUT_DIR=build_out
 BUILD_OPERATORS="all"
 RUN_TEST=OFF
 ENABLE_PACKAGE=OFF
-SOC_VERSION="Ascend950"
+SOC_VERSION=""               # 默认为空；普通构建自动取 SUPPORTED_SOCS[0]，--pkg 时必须显式指定
 THREAD_NUM=8
 BUILD_TYPE=Release
-VERBOSE=""
+VERBOSE_ENABLED=false         # verbose 日志布尔开关（log_verbose 使用）
+CMAKE_VERBOSE=""              # 透传给 cmake --build 的参数（-v）
 CMAKE_OPTIONS=""
 TEST_TIMEOUT=300  # 默认测试超时时间（秒）
 
@@ -55,7 +56,7 @@ log_error() {
 }
 
 log_verbose() {
-    if [ "$VERBOSE" = true ]; then
+    if [ "$VERBOSE_ENABLED" = true ]; then
         echo -e "${BLUE}[VERBOSE]${NC} $1"
     fi
 }
@@ -77,11 +78,22 @@ validate_soc_version() {
     return 1  # 不支持
 }
 
-# SoC 名称标准化函数（首字母大写，其余小写）
+# SoC 名称标准化函数
+# 以 SUPPORTED_SOCS 中的规范拼写为准：大小写不敏感匹配后返回规范名称，
+# 可正确处理 Ascend910B1 这类中间含大写字母的型号（sed 无法可靠推断大小写）。
+# 无法匹配任何已支持型号时，退化为"首字母大写、其余小写"，交由 validate_soc_version 拒绝。
 normalize_soc_name() {
     local soc="$1"
-    # 转换为小写，然后首字母大写
-    echo "${soc}" | sed 's/.*/\L&/; s/^./\U&/; s/.$/\U&/'
+    local lower_soc lower_supported
+    lower_soc=$(printf "%s" "${soc}" | tr '[:upper:]' '[:lower:]')
+    for supported_soc in "${SUPPORTED_SOCS[@]}"; do
+        lower_supported=$(printf "%s" "${supported_soc}" | tr '[:upper:]' '[:lower:]')
+        if [ "${lower_soc}" = "${lower_supported}" ]; then
+            printf "%s\n" "${supported_soc}"
+            return 0
+        fi
+    done
+    printf "%s" "${soc}" | sed 's/.*/\L&/; s/^./\U&/'
 }
 
 # ==========================
@@ -96,9 +108,9 @@ Options:
   --soc=VERSION         Target SoC version $(printf "%s" "${SUPPORTED_SOCS}")
   --build-type=TYPE     Build type: Release (default), Debug
   --test-timeout=N      Test timeout in seconds (default: 300)
-  --make_clean          Clean build artifacts"
+  --make_clean          Clean build artifacts and exit
   --run                 Run operator test after build
-  --pkg                 Build package (RUN file)
+  --pkg                 Build package (RUN file), --soc required
   --cann_3rd_lib_path=PATH  Third-party lib path (default: ./third_party)
   -j[N]                 Parallel build threads (default: $(nproc))
   -v, --verbose         Verbose output
@@ -111,10 +123,9 @@ Examples:
   $(basename "$0") -j16                               # Build with 16 threads
   $(basename "$0") --run                              # Build all and run tests
   $(basename "$0") --ops=stateless_random_uniform_v2 --run # Build and run tests
-  $(basename "$0") --pkg                              # Build package (default SoC: Ascend950)
-  $(basename "$0") --ops=stateless_random_uniform_v2 --pkg # Build and package
-  $(basename "$0") --soc=Ascend950 --pkg              # Build package for Ascend950
+  $(basename "$0") --soc=Ascend950 --pkg              # Build package for Ascend950 (--soc required for --pkg)
   $(basename "$0") --soc=ascend950 --pkg              # Build package (lowercase also works)
+  $(basename "$0") --ops=stateless_random_uniform_v2 --soc=Ascend950 --pkg # Build and package
   $(basename "$0") --test-timeout=600 --run           # Run tests with 600s timeout
   $(basename "$0") --make_clean                       # Clean build artifacts
 EOF
@@ -288,7 +299,8 @@ parse_arguments() {
                 shift
                 ;;
             -v|--verbose)
-                VERBOSE="-v"
+                VERBOSE_ENABLED=true
+                CMAKE_VERBOSE="-v"
                 shift
                 ;;
             --help|-h)
@@ -329,7 +341,13 @@ assemble_cmake_args() {
         fi
     fi
 
-    # 芯片版本验证
+    # 芯片版本验证（必须在默认值填充前，保证 --pkg 必填校验有效）
+    if [ "$ENABLE_PACKAGE" = "ON" ] && [ -z "$SOC_VERSION" ]; then
+        log_error "--soc is required for packaging"
+        log_error "Example: bash build.sh --pkg --soc=ascend950"
+        exit 1
+    fi
+
     if [ -n "$SOC_VERSION" ]; then
         if ! validate_soc_version "$SOC_VERSION"; then
             log_error "Unsupported SoC version: ${SOC_VERSION}"
@@ -338,13 +356,10 @@ assemble_cmake_args() {
         else
             log_success "Supported SoC version: ${SOC_VERSION}"
         fi
-    fi
-
-    # 验证必要参数
-    if [ -z "$SOC_VERSION" ] && [ "$ENABLE_PACKAGE" = "ON" ]; then
-        echo "Error: --soc is required for packaging"
-        echo "Example: bash build.sh --pkg --soc=ascend950"
-        exit 1
+    else
+        # 非打包模式下未指定时，使用默认 SoC
+        SOC_VERSION="${SUPPORTED_SOCS[0]}"
+        log_info "No SoC specified, using default: ${SOC_VERSION}"
     fi
 
     if [ "$BUILD_OPERATORS" != "all" ]; then
@@ -371,20 +386,25 @@ main() {
     #检查参数
     parse_arguments "$@"
 
+    log_verbose "verbose mode enabled: cmake will also print verbose build output"
+
     assemble_cmake_args
     echo "CMake Options: ${CMAKE_OPTIONS}"
 
     # 依赖检查
     check_dependencies
 
-    clean_build
+    # 仅在显式指定 --make_clean 时清理（parse_arguments 中处理），
+    # 默认保留 build/ 目录以支持增量编译
+    log_verbose "incremental build: build/ directory preserved (use --make_clean to clean)"
 
     # 执行 CMake 配置
+    log_verbose "cmake -B ${BUILD_DIR} ${CMAKE_OPTIONS}"
     cmake -B ${BUILD_DIR} ${CMAKE_OPTIONS}
 
     # 执行构建
     log_info "Compiling with ${THREAD_NUM} threads..."
-    cmake --build ${BUILD_DIR} -j${THREAD_NUM} ${VERBOSE}
+    cmake --build ${BUILD_DIR} -j${THREAD_NUM} ${CMAKE_VERBOSE}
 
     # 运行测试（如果指定）
     if [ "$RUN_TEST" = "ON" ]; then
@@ -395,7 +415,7 @@ main() {
     if [ "$ENABLE_PACKAGE" = "ON" ]; then
         echo ""
         echo "=============== Building Package ==============="
-        cmake --build ${BUILD_DIR} --target package ${VERBOSE}
+        cmake --build ${BUILD_DIR} --target package ${CMAKE_VERBOSE}
         echo ""
         echo "Package created successfully!"
         echo ""
@@ -410,10 +430,13 @@ main() {
     fi
 
     # 安装
+    log_verbose "installing to ${BUILD_OUT_DIR}"
     cmake --install ${BUILD_DIR}
 
     log_success "All operations completed!"
 }
 
-# 运行主函数
-main "$@"
+# 运行主函数（被 source 时不执行，便于 shell 单测复用函数）
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

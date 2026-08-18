@@ -13,7 +13,10 @@ macro(init_env)
     # 3. 设置 NPU 架构
     _setup_npu_arch()
 
-    # 4. 发现算子
+    # 4. 检测 CANN 运行库目录（devlib：libtiling_api 等；lib64：libascendc_runtime 等）
+    _check_cann_lib_layout()
+
+    # 5. 发现算子
     _discover_operators()
 endmacro()
 
@@ -63,7 +66,57 @@ macro(_check_cann_include_layout)
     unset(_CANN_INC_CANDIDATES)
 endmacro()
 
-# 3. 设置 NPU 架构（SoC 映射）
+# 4. 检测 CANN 运行库目录
+#    devlib：libtiling_api（tiling 平台库）等
+#    lib64： libascendc_runtime（Ascend C kernel 宿主侧运行时）等
+#    与头文件布局对应：${ASCEND_HOME_PATH}/${arch}-linux/{devlib,lib64}
+macro(_check_cann_lib_layout)
+    set(_CANN_DEVLIB_CANDIDATES
+        "${ASCEND_HOME_PATH}/${CMAKE_SYSTEM_PROCESSOR}-linux/devlib"
+        "${ASCEND_HOME_PATH}/devlib"
+    )
+    set(CANN_DEVLIB_ROOT "")
+    foreach(_cann_devlib_dir IN LISTS _CANN_DEVLIB_CANDIDATES)
+        if(IS_DIRECTORY "${_cann_devlib_dir}")
+            set(CANN_DEVLIB_ROOT "${_cann_devlib_dir}")
+            break()
+        endif()
+    endforeach()
+    if("${CANN_DEVLIB_ROOT}" STREQUAL "")
+        message(FATAL_ERROR
+            "✗ Cannot find devlib directory in CANN install: ${ASCEND_HOME_PATH}\n"
+            "  Searched:\n"
+            "    ${_CANN_DEVLIB_CANDIDATES}"
+        )
+    endif()
+    message(STATUS "✓ CANN devlib: ${CANN_DEVLIB_ROOT}")
+    unset(_cann_devlib_dir)
+    unset(_CANN_DEVLIB_CANDIDATES)
+
+    set(_CANN_LIB64_CANDIDATES
+        "${ASCEND_HOME_PATH}/${CMAKE_SYSTEM_PROCESSOR}-linux/lib64"
+        "${ASCEND_HOME_PATH}/lib64"
+    )
+    set(CANN_LIB64_ROOT "")
+    foreach(_cann_lib64_dir IN LISTS _CANN_LIB64_CANDIDATES)
+        if(IS_DIRECTORY "${_cann_lib64_dir}")
+            set(CANN_LIB64_ROOT "${_cann_lib64_dir}")
+            break()
+        endif()
+    endforeach()
+    if("${CANN_LIB64_ROOT}" STREQUAL "")
+        message(FATAL_ERROR
+            "✗ Cannot find lib64 directory in CANN install: ${ASCEND_HOME_PATH}\n"
+            "  Searched:\n"
+            "    ${_CANN_LIB64_CANDIDATES}"
+        )
+    endif()
+    message(STATUS "✓ CANN lib64: ${CANN_LIB64_ROOT}")
+    unset(_cann_lib64_dir)
+    unset(_CANN_LIB64_CANDIDATES)
+endmacro()
+
+# 5. 设置 NPU 架构（SoC 映射）
 macro(_setup_npu_arch)
     # 映射表（注意：dav-3101 已改名为 dav-3510）
     set(SOC_TO_NPU_ARCH_MAP

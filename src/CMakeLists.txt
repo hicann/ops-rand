@@ -39,9 +39,19 @@ target_compile_options(${OPS_RAND} PRIVATE
     $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=${ASCEND_NPU_ARCH}>
 )
 
-# 链接 CANN tiling 平台库 (提供 GetCoreNumAiv 等函数)
+# 链接 CANN tiling 平台库与 Ascend C 宿主侧运行时
+# host 侧源码保持 CXX 后，目标链接语言为 CXX，需显式指定库搜索路径并补齐
+# 运行时依赖（此前全 ASC 编译时由 bisheng/ccec 驱动链接自动携带）：
+#   - tiling_api      提供 GetCoreNumAiv 等 tiling 平台函数（devlib）
+#   - ascendc_runtime 提供 AscendLaunchKernelWithHostArgs 等 kernel 宿主侧符号（lib64）
+# 路径由 cmake/init_env.cmake 探测（CANN_DEVLIB_ROOT / CANN_LIB64_ROOT）
+target_link_directories(${OPS_RAND} PRIVATE
+    ${CANN_DEVLIB_ROOT}
+    ${CANN_LIB64_ROOT}
+)
 target_link_libraries(${OPS_RAND} PRIVATE
     tiling_api
+    ascendc_runtime
 )
 
 ##############################################################################
@@ -53,12 +63,13 @@ message(STATUS "Registering operators...")
 message(STATUS "==========================================")
 
 # 收集 lib 目录源码
-if(IS_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
-    file(GLOB LIB_SRC ${CMAKE_SOURCE_DIR}/lib/*.cpp)
-    if(LIB_SRC)
-        target_sources(${OPS_RAND} PRIVATE ${LIB_SRC})
-        message(STATUS "Collected lib sources: ${LIB_SRC}")
-    endif()
+# lib/ 下为 host 侧普通 C++ 实现（调用 ACL API），保持默认 CXX 语言，
+# 不标记为 ASC；显式列出源文件，避免 file(GLOB) 新增文件后不触发重新 configure
+if(EXISTS ${CMAKE_SOURCE_DIR}/lib/generator.cpp)
+    target_sources(${OPS_RAND} PRIVATE
+        ${CMAKE_SOURCE_DIR}/lib/generator.cpp
+    )
+    message(STATUS "Collected lib sources: ${CMAKE_SOURCE_DIR}/lib/generator.cpp")
 endif()
 
 foreach(OP ${BUILD_OPERATORS})
@@ -75,8 +86,15 @@ if (NOT LIB_TARGET_SOURCE OR LIB_TARGET_SOURCE STREQUAL "")
     message(FATAL_ERROR "No sources added to cann_ops_rand target")
 endif()
 
+# 仅对 register_operator() 注册的 kernel 源文件标记 ASC 语言（由 ccec 编译，
+# 使用 --npu-arch 等选项）；lib/ 下的 host 侧普通 C++ 保持默认 CXX。
+# 注意：必须在目标所在目录作用域设置源文件属性，子目录中设置不可见。
+get_property(OPS_RAND_KERNEL_SOURCES GLOBAL PROPERTY OPS_RAND_KERNEL_SOURCES)
+if(NOT OPS_RAND_KERNEL_SOURCES)
+    message(FATAL_ERROR "No kernel sources registered by register_operator()")
+endif()
 set_source_files_properties(
-    ${LIB_TARGET_SOURCE}
+    ${OPS_RAND_KERNEL_SOURCES}
     PROPERTIES LANGUAGE ASC
 )
 

@@ -139,10 +139,17 @@ function(register_operator)
             set(abs_src ${OP_SOURCE_DIR}/${src})
         endif()
         list(APPEND absolute_sources ${abs_src})
-        
+
         # ========= 直接添加源码到库=========
         target_sources(${OPS_RAND} PRIVATE ${abs_src})
     endforeach()
+
+    # ========= 记录 kernel 源文件，供目标所在目录统一标记 ASC 语言 =========
+    # 注意：源文件属性是目录作用域的，此处位于算子子目录作用域，直接
+    # set_source_files_properties 对定义在 src/ 的目标不可见；因此收集到
+    # 全局属性，由 src/CMakeLists.txt 在目标作用域内统一设置 LANGUAGE ASC。
+    # lib/ 下的 host 侧普通 C++ 不在此列，保持默认 CXX。
+    set_property(GLOBAL APPEND PROPERTY OPS_RAND_KERNEL_SOURCES ${absolute_sources})
 
     # ========= 头文件包含目录 =========
     target_include_directories(${OPS_RAND} PRIVATE
