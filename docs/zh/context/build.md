@@ -104,7 +104,7 @@ build_out/                       # 编译输出目录
 
 ## 常见问题
 
-### 1. 编译失败：找不到bisheng编译器
+### 编译失败：找不到bisheng编译器
 
 **原因**：bisheng编译器未安装或未配置到PATH环境变量。
 
@@ -116,7 +116,7 @@ bisheng --version
 # 如未安装，请参考环境部署文档安装CANN toolkit包
 ```
 
-### 2. 编译失败：找不到ASCEND_HOME_PATH
+### 编译失败：找不到ASCEND_HOME_PATH
 
 **原因**：未配置CANN环境变量。
 
@@ -126,7 +126,7 @@ bisheng --version
 source /usr/local/Ascend/cann/set_env.sh
 ```
 
-### 3. 测试运行失败
+### 测试运行失败
 
 **原因**：可能缺少运行依赖或NPU设备未正确配置。
 

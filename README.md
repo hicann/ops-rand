@@ -18,13 +18,15 @@ ops-rand是[CANN](https://hiascend.com/software/cann) （Compute Architecture fo
 
 ## 📝 版本配套
 
-当前仓库已验证通过的 CANN Toolkit 如下：
+当前仓库已验证通过的 CANN Toolkit 最低版本如下：
 
 | CANN 版本 | 发布时间 | 分支 |
 | --- | --- | --- |
 | [CANN 9.0.0-beta.2](https://www.hiascend.com/developer/download/community/result?module=cann&cann=9.0.0-beta.2) | `2026/03/30` | master |
 
-请根据实际 CPU 架构，从上述链接目录中自行选择对应的 `.run` 安装包。
+请根据实际 CPU 架构，从上述链接目录中自行选择对应的 `.run` 安装包，版本不得低于上表。
+
+> **关于 Docker 镜像**：[环境部署](docs/zh/context/quick_install.md) 中的 Docker 示例使用内置 CANN 9.0.0 的镜像，高于上表的最低版本，二者不冲突。
 
 toolkit 安装包文件名格式如下：
 
@@ -69,8 +71,8 @@ toolkit 安装包文件名格式如下：
 # 编译并运行测试
 ./build.sh --run
 
-# 编译并打包成 .run 文件
-./build.sh --pkg
+# 编译并打包成 .run 文件（打包必须指定 --soc）
+./build.sh --pkg --soc=ascend950
 
 # 查看完整帮助信息
 ./build.sh --help
@@ -83,15 +85,17 @@ toolkit 安装包文件名格式如下：
 - `${package_version}`：ops-rand 软件包自身版本号（定义于仓库根目录 `version.cmake` 中 `set_package` 的 `VERSION` 字段，当前为 `9.0.0`）。**注意：该版本号与「版本配套」章节中已验证的 CANN Toolkit 版本（如 `9.0.0-beta.2`）相互独立，两者不一致属正常现象。**
 - `${arch}`：CPU 架构，如 `aarch64`、`x86_64`。
 
+操作类型参数 `--full`（全量安装）、`--upgrade`（升级）、`--uninstall`（卸载）三者必须且只能指定一个，缺省会报 `only support one type: full/upgrade/uninstall` 并退出。
+
 ```bash
 # 标准安装（需要 root 权限）
-sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run
+sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run --full
 
 # 查看安装包信息
 ./cann-950-ops-rand_${package_version}_linux-${arch}.run --help
 
 # 安装到自定义路径
-sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run --install-path=/opt/ascend
+sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run --full --install-path=/opt/ascend
 
 # 卸载
 sudo ./cann-950-ops-rand_${package_version}_linux-${arch}.run --uninstall

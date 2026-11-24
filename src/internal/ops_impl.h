@@ -44,6 +44,23 @@ extern "C" {
 aclError _aclrandStatelessRandomUniformV2(
     uint64_t seed, uint64_t offset, int32_t alg, void* output, uint64_t n, aclDataType dtype, aclrtStream stream);
 
+/**
+ * @brief Number of Philox counter values consumed by one _aclrandStatelessRandomUniformV2 call
+ *
+ * Generates no random numbers; only replays the tiling math to report how far the
+ * counter advances. A stateful Generator must advance its offset by this amount so
+ * that consecutive calls do not re-emit the same sequence. The value can exceed
+ * ceil(n / 4) because each per-core tile pads its generation count up to a whole
+ * vector repeat before advancing the counter.
+ *
+ * @param n        Number of random numbers the corresponding generate call produces
+ * @param dtype    Data type of that call (ACL_FLOAT, ACL_FLOAT16, or ACL_BF16)
+ * @param counters Output: consumed Philox counter count
+ *
+ * @return ACL_SUCCESS on success, ACL_ERROR_INVALID_PARAM for invalid n/dtype/counters
+ */
+aclError _aclrandStatelessRandomUniformV2CounterUsage(uint64_t n, aclDataType dtype, uint64_t* counters);
+
 /* Add more internal operator declarations here as needed:
  *
  * aclError _aclrandStatelessRandomNormalV2(...);

@@ -26,6 +26,11 @@ struct StatelessRandomUniformV2TilingData {
     uint32_t tilingKey;
 };
 
+// Philox4x32 产生 4 个 32 位结果/计数器, 且每次 PhiloxRandom 调用按整个向量 repeat
+// 补齐生成数量。Host 侧推进 Generator offset 需要同一组常量, 故置于命名空间作用域共享。
+constexpr uint16_t PHILOX_RESULT_ELEMENT_CNT = 4;
+constexpr uint32_t PHILOX_GEN_ALIGN_ELEMENTS = Ops::Base::GetVRegSize() / sizeof(int32_t);
+
 template <typename T>
 __aicore__ inline T CeilDiv(const T a, const T b)
 {
@@ -60,8 +65,8 @@ private:
     static constexpr uint16_t BLOCK_SIZE = 32;
     static constexpr uint16_t ALG_KEY_SIZE = 2;
     static constexpr uint16_t ALG_COUNTER_SIZE = 4;
-    static constexpr uint16_t RESULT_ELEMENT_CNT = 4;
-    static constexpr uint32_t INT32_ONE_REPEAT = Ops::Base::GetVRegSize() / sizeof(int32_t);
+    static constexpr uint16_t RESULT_ELEMENT_CNT = PHILOX_RESULT_ELEMENT_CNT;
+    static constexpr uint32_t INT32_ONE_REPEAT = PHILOX_GEN_ALIGN_ELEMENTS;
 
     GlobalTensor<T> outputGm_;
     TBuf<QuePosition::VECCALC> philoxQueBuf_;

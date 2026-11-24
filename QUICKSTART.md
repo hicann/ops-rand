@@ -3,7 +3,7 @@
 本指南旨在帮助你快速上手基于CANN和`ops-rand`算子仓的使用，最简化地完成环境安装、编译部署及算子运行。
 
 ## 一、环境安装
-### 1. 有环境场景：Docker安装
+### 有环境场景：Docker安装
 
 Docker安装环境以Atlas A2产品（910B）为例。
 **前提条件**：
@@ -46,19 +46,19 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     cat /usr/local/Ascend/ascend-toolkit/latest/opp/version.info
     ```
 
-### 2. 无环境场景：WebIDE开发（建设中）
+### 无环境场景：WebIDE开发（建设中）
 对于无环境的用户，提供WebIDE开发方式，目前本方式正在建设中。
 
 ## 二、编译部署
 
-### 1. 拉取ops-rand仓库代码
+### 拉取ops-rand仓库代码
 
 ```bash
 git clone https://gitcode.com/cann/ops-rand.git
 cd ops-rand
 ```
 
-### 2. 编译ops-rand算子包
+### 编译ops-rand算子包
 
 ```bash
 bash build.sh --pkg --soc=ascend950
@@ -71,7 +71,7 @@ Build package success: build_out/cann-950-ops-rand_9.0.0_linux-x86_64.run
 ```
 编译成功后，run包存放于项目根目录的build_out目录下。
 
-### 3. 安装ops-rand算子包
+### 安装ops-rand算子包
 ```bash
 ./build_out/cann-${soc_name}-ops-rand_${cann_version}_linux-${arch}.run --full --install-path=${install_path}
 ```
@@ -83,13 +83,16 @@ Build package success: build_out/cann-950-ops-rand_9.0.0_linux-x86_64.run
 
 ops-rand安装在`${install_path}/cann`路径中。
 
-### 4. 配置环境变量
+### 配置环境变量
 
 ```bash
-source ${ASCEND_HOME_PATH}/cann/set_env.bash
+# 默认安装路径示例
+source /usr/local/Ascend/cann/set_env.sh
 ```
 
-### 5. 运行测试
+- 若安装时指定了自定义 `${install_path}`，请将上述路径替换为 `${install_path}/cann/set_env.sh`。
+
+### 运行测试
 
 ```bash
 bash build.sh --run

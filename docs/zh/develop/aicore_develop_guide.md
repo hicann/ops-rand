@@ -15,11 +15,11 @@
 
 ## 工程创建
 
-### 1. 环境部署
+### 环境部署
 
 开发算子前，请先参考[环境部署](../context/quick_install.md)完成基础环境搭建。
 
-### 2. 目录创建
+### 目录创建
 
 在`src`目录下创建新的算子目录，目录名为算子名的小写下划线形式。
 
@@ -56,7 +56,7 @@ ${op_name}/                              # 算子名的小写下划线形式
 
 ### API接口定义
 
-在`include/cann_ops_rand.h`中定义算子的对外API接口：
+内部 API 声明在`src/internal/ops_impl.h`中（对外 `aclrand*` 接口声明在`include/cann_ops_rand.h`）：
 
 ```cpp
 #ifdef __cplusplus
@@ -70,7 +70,8 @@ aclError _aclrandStatelessRandomUniformV2(
     int32_t alg,
     void *output,
     uint64_t n,
-    int32_t dtype
+    aclDataType dtype,
+    aclrtStream stream
 );
 
 #ifdef __cplusplus
@@ -80,7 +81,8 @@ aclError _aclrandStatelessRandomUniformV2(
 
 > **说明**：
 > - `output` 参数类型为 `void*`，实际数据类型由 `dtype` 参数决定
-> - `dtype` 参数：0=FP32, 1=FP16, 2=BF16
+> - `dtype` 参数为 ACL 数据类型枚举：`ACL_FLOAT`(0)=FP32、`ACL_FLOAT16`(1)=FP16、`ACL_BF16`(27)=BF16
+> - `stream` 指定 Kernel 执行的 ACL 流，传 `nullptr` 使用默认流；接口内部会等待 Kernel 完成并拷回 Host
 
 ## Tiling实现
 
@@ -313,6 +315,8 @@ extern "C" __global__ __aicore__ void stateless_random_uniform_v2(
 }
 ```
 
+> 实际实现按 `tilingKey` 分派 `float` / `half` / `bfloat16_t` 三种模板实例，上例以 FP32 为例。
+
 ### Host侧API实现
 
 ```cpp
@@ -320,30 +324,48 @@ aclError _aclrandStatelessRandomUniformV2(
     uint64_t seed,
     uint64_t offset,
     int32_t alg,
-    float *output,
-    uint64_t n
+    void *output,
+    uint64_t n,
+    aclDataType dtype,
+    aclrtStream stream
 ) {
-    // 1. 参数校验
+    // 1. 参数校验：空指针/零长度、dtype 是否支持、单次长度上限
     if (output == nullptr || n == 0) {
         return ACL_ERROR;
     }
+    uint32_t dtypeSize = 0;
+    uint32_t tilingKey = 0;
+    aclError ret = GetDtypeInfo(dtype, dtypeSize, tilingKey);
+    if (ret != ACL_SUCCESS) {
+        return ret;
+    }
+    if (n > MAX_OUTPUT_ELEMENTS || n > SIZE_MAX / dtypeSize) {
+        return ACL_ERROR_INVALID_PARAM;
+    }
 
-    // 2. 分配设备内存
+    // 2. 按 dtype 字节数分配设备内存
+    size_t outputSize = static_cast<size_t>(n) * dtypeSize;
     void *devOut = nullptr;
-    aclrtMalloc(&devOut, n * sizeof(float), ACL_MEM_MALLOC_HUGE_FIRST);
+    if (aclrtMalloc(&devOut, outputSize, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
+        return ACL_ERROR;
+    }
 
     // 3. 计算Tiling参数
-    auto ascendcPlatform = platform_ascendc::PlatformAscendCManager::GetInstance();
-    StatelessRandomUniformV2TilingData *tilingData = new StatelessRandomUniformV2TilingData();
-    // ... Tiling参数计算 ...
+    StatelessRandomUniformV2TilingData tilingData;
+    // ... CalcTilingData(n, dtypeSize, ...) 与 PackSeedAndOffset(seed, offset, alg, tilingKey, tilingData) ...
 
-    // 4. 启动Kernel
-    stateless_random_uniform_v2<<<tilingData->blockNum, nullptr, 0>>>(
-        (__gm__ uint8_t *)devOut, *tilingData
+    // 4. 在指定stream上启动Kernel
+    stateless_random_uniform_v2<<<tilingData.blockNum, nullptr, stream>>>(
+        reinterpret_cast<uint8_t *>(devOut), tilingData
     );
 
-    // 5. 拷贝结果到Host
-    aclrtMemcpy(output, n * sizeof(float), devOut, n * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
+    // 5. 等待Kernel完成后拷回Host（该接口是同步的）
+    if (stream != nullptr) {
+        aclrtSynchronizeStream(stream);
+    } else {
+        aclrtSynchronizeDevice();
+    }
+    aclrtMemcpy(output, outputSize, devOut, outputSize, ACL_MEMCPY_DEVICE_TO_HOST);
 
     // 6. 释放资源
     aclrtFree(devOut);
@@ -356,11 +378,11 @@ aclError _aclrandStatelessRandomUniformV2(
 
 算子开发完成后，需对算子工程进行编译，生成ops-rand安装包。
 
-### 1. 准备工作
+### 准备工作
 
 参考[工程创建](#工程创建)完成基础环境搭建，同时检查算子开发交付件是否完备。
 
-### 2. 配置环境变量
+### 配置环境变量
 
 ```bash
 # 默认路径安装
@@ -369,7 +391,7 @@ source /usr/local/Ascend/cann/set_env.sh
 # source ${install_path}/cann/set_env.sh
 ```
 
-### 3. 编译ops-rand包
+### 编译ops-rand包
 
 进入项目根目录，执行编译命令：
 
@@ -387,7 +409,7 @@ bash build.sh --pkg --soc=ascend950 --ops=${op_name}
 Self-extractable archive "cann-950-ops-rand_9.0.0_linux-x86_64.run" successfully created.
 ```
 
-### 4. 安装ops-rand包
+### 安装ops-rand包
 
 ```bash
 ./build_out/cann-${soc_name}-ops-rand_${cann_version}_linux-${arch}.run --full --install-path=${install_path}

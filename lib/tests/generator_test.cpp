@@ -284,6 +284,88 @@ void test_generate_uniform_unsupported_rng(aclrtStream stream, OpsRandTest::Test
     TEST_CASE_PASS(stats, "test_generate_uniform_unsupported_rng");
 }
 
+namespace {
+
+// 单次生成 2n 个元素必须与同一 seed/offset 下连续两次 n 个元素的拼接逐位相同:
+// 推进量少算会与第一段重叠, 多算会跳值, 两种情况都会失配
+void AssertOffsetAdvanceMatchesConsumption(
+    uint64_t seed, uint64_t offset, uint64_t n, const float* first, const float* second,
+    OpsRandTest::TestStats& stats)
+{
+    std::vector<float> single(2 * n);
+    std::vector<float> combined(2 * n);
+    for (uint64_t i = 0; i < n; ++i) {
+        combined[i] = first[i];
+        combined[n + i] = second[i];
+    }
+
+    aclrandGenerator_t gen;
+    aclrandStatus_t ret = aclrandCreateGenerator(&gen, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
+    ret = aclrandSetGeneratorSeed(gen, seed);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed failed");
+    ret = aclrandSetGeneratorOffset(gen, offset);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset failed");
+    aclrandStatus_t status = aclrandGenerateUniform(gen, single.data(), 2 * n);
+    TEST_ASSERT(stats, status == ACLRAND_STATUS_SUCCESS, "single 2n aclrandGenerateUniform failed");
+    ret = aclrandDestroyGenerator(gen);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
+
+    TEST_ASSERT_ARRAY_EQ(
+        stats, single.data(), combined.data(), 2 * n, "offset advance does not match consumed counters");
+}
+
+} // namespace
+
+// Test that consecutive calls on one generator consume the stream instead of replaying it
+void test_generate_uniform_advances_offset(aclrtStream stream, OpsRandTest::TestStats& stats)
+{
+    TEST_CASE_BEGIN("test_generate_uniform_advances_offset");
+
+    const uint64_t n = 64;
+    const uint64_t seed = 1234; // 测试用固定 seed
+    const uint64_t offset = 7;  // 测试用固定起始 offset
+    float first[n];
+    float second[n];
+    float replay[n];
+
+    aclrandGenerator_t gen;
+    aclrandStatus_t ret = aclrandCreateGenerator(&gen, ACLRAND_RNG_PSEUDO_DEFAULT);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandCreateGenerator failed");
+    ret = aclrandSetGeneratorSeed(gen, seed);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorSeed failed");
+    ret = aclrandSetGeneratorOffset(gen, offset);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset failed");
+
+    aclrandStatus_t status = aclrandGenerateUniform(gen, first, n);
+    TEST_ASSERT(stats, status == ACLRAND_STATUS_SUCCESS, "first aclrandGenerateUniform failed");
+    status = aclrandGenerateUniform(gen, second, n);
+    TEST_ASSERT(stats, status == ACLRAND_STATUS_SUCCESS, "second aclrandGenerateUniform failed");
+
+    // 有状态随机流: 第二次调用必须继续消费序列, 不能重放第一段
+    bool differs = false;
+    for (uint64_t i = 0; i < n; ++i) {
+        if (first[i] != second[i]) {
+            differs = true;
+            break;
+        }
+    }
+    TEST_ASSERT(stats, differs, "consecutive calls replayed the same sequence (offset not advanced)");
+    AssertOffsetAdvanceMatchesConsumption(seed, offset, n, first, second, stats);
+
+    // 显式复位 offset 后应逐位重放第一段, 保证可复现语义不被推进破坏
+    ret = aclrandSetGeneratorOffset(gen, offset);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandSetGeneratorOffset failed");
+    status = aclrandGenerateUniform(gen, replay, n);
+    TEST_ASSERT(stats, status == ACLRAND_STATUS_SUCCESS, "replay aclrandGenerateUniform failed");
+    TEST_ASSERT_ARRAY_EQ(stats, first, replay, n, "offset reset did not replay the first sequence");
+
+    ret = aclrandDestroyGenerator(gen);
+    TEST_ASSERT(stats, ret == ACLRAND_STATUS_SUCCESS, "aclrandDestroyGenerator failed");
+
+    TEST_CASE_PASS(stats, "test_generate_uniform_advances_offset");
+}
+
 void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
 {
     test_create_generator(stream, stats);
@@ -296,6 +378,7 @@ void run_all_tests(aclrtStream stream, OpsRandTest::TestStats& stats)
     test_generate_uniform_null(stream, stats);
     test_generate_uniform_reproducibility(stream, stats);
     test_generate_uniform_unsupported_rng(stream, stats);
+    test_generate_uniform_advances_offset(stream, stats);
 }
 
 } // namespace GeneratorTest

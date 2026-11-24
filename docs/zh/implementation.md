@@ -9,28 +9,28 @@
 
 ## ✅ 已实现接口 (Phase 1)
 
-### 1. 版本管理
+### 版本管理
 - `aclrandGetVersion` - 获取库版本号
 
-### 2. 生成器管理
+### 生成器管理
 - `aclrandCreateGenerator` - 创建随机数生成器
 - `aclrandDestroyGenerator` - 销毁生成器
 
-### 3. 生成器配置
+### 生成器配置
 - `aclrandSetGeneratorSeed` - 设置生成器种子
 - `aclrandSetGeneratorOffset` - 设置生成器偏移量
 - `aclrandSetGeneratorStream` - 设置 ACL 流
 
-### 4. 随机数生成
+### 随机数生成
 - `aclrandGenerateUniform` - 生成均匀分布随机数 (FP32)
 
-### 5. 辅助工具
+### 辅助工具
 - `aclrandGetErrorString` - 获取错误字符串（待验证）
 
-### 6. 已实现算子
+### 已实现算子
 - **stateless_random_uniform_v2** (无状态均匀分布) - `src/stateless_random_uniform_v2/`
 
-### 7. 支持范围
+### 支持范围
 - **生成器类型**: `ACLRAND_RNG_PSEUDO_DEFAULT`, `ACLRAND_RNG_PSEUDO_PHILOX4_32_10`
 - **数据类型**: FP32 (`float`)
 - **芯片**: Ascend 950

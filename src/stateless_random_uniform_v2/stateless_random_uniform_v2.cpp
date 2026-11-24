@@ -15,6 +15,8 @@
 
 #include "arch35/stateless_random_uniform_v2.h"
 
+#include <algorithm>
+
 #include "acl/acl.h"
 #include "platform/platform_info.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -70,6 +72,34 @@ aclError GetDtypeInfo(aclDataType dtype, uint32_t& dtypeSize, uint32_t& tilingKe
         default:
             return ACL_ERROR_INVALID_PARAM;
     }
+}
+
+/**
+ * @brief Resolve dtype information and validate the requested output size
+ * @param n Number of output elements
+ * @param dtype Input data type
+ * @param dtypeSize Output: size of the data type in bytes
+ * @param tilingKey Output: tiling key for the data type
+ * @return ACL_SUCCESS on success, ACL_ERROR_INVALID_PARAM for unsupported dtype
+ *         or output size over the per-call limit
+ */
+aclError GetOutputSizeInfo(uint64_t n, aclDataType dtype, uint32_t& dtypeSize, uint32_t& tilingKey)
+{
+    aclError ret = GetDtypeInfo(dtype, dtypeSize, tilingKey);
+    if (ret != ACL_SUCCESS) {
+        return ret;
+    }
+    // GetDtypeInfo returns non-zero dtypeSize for every supported dtype; keep the
+    // explicit check so the division below can never see a zero divisor
+    if (dtypeSize == 0) {
+        return ACL_ERROR_INVALID_PARAM;
+    }
+    // Upper bound prevents excessive device memory allocation (DoS); the overflow
+    // check keeps n * dtypeSize from wrapping around
+    if (n > MAX_OUTPUT_ELEMENTS || n > SIZE_MAX / dtypeSize) {
+        return ACL_ERROR_INVALID_PARAM;
+    }
+    return ACL_SUCCESS;
 }
 
 /**
@@ -161,28 +191,22 @@ extern "C" aclError _aclrandStatelessRandomUniformV2(
         return ACL_ERROR;
     }
 
-    // 2. Get data type information
+    // 2. Validate dtype and output size
     uint32_t dtypeSize = 0;
     uint32_t tilingKey = 0;
-    aclError ret = GetDtypeInfo(dtype, dtypeSize, tilingKey);
+    aclError ret = GetOutputSizeInfo(n, dtype, dtypeSize, tilingKey);
     if (ret != ACL_SUCCESS) {
         return ret;
     }
 
-    // 3. Validate output size: upper bound prevents excessive device memory
-    //    allocation (DoS), overflow check keeps n * dtypeSize from wrapping around
-    if (n > MAX_OUTPUT_ELEMENTS || n > SIZE_MAX / dtypeSize) {
-        return ACL_ERROR_INVALID_PARAM;
-    }
-
-    // 4. Allocate device memory
+    // 3. Allocate device memory
     size_t outputSize = static_cast<size_t>(n) * dtypeSize;
     void* devOut = nullptr;
     if (aclrtMalloc(&devOut, outputSize, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) {
         return ACL_ERROR;
     }
 
-    // 5. Calculate tiling parameters (in element count)
+    // 4. Calculate tiling parameters (in element count)
     auto platform = platform_ascendc::PlatformAscendCManager::GetInstance();
     if (platform == nullptr) {
         aclrtFree(devOut);
@@ -196,11 +220,11 @@ extern "C" aclError _aclrandStatelessRandomUniformV2(
     }
     PackSeedAndOffset(seed, offset, alg, tilingKey, tilingData);
 
-    // 6. Launch kernel
+    // 5. Launch kernel
     stateless_random_uniform_v2<<<tilingData.blockNum, nullptr, stream>>>(
         reinterpret_cast<uint8_t*>(devOut), tilingData);
 
-    // 7. Wait for the kernel before copying back: the synchronous aclrtMemcpy is
+    // 6. Wait for the kernel before copying back: the synchronous aclrtMemcpy is
     //    not ordered with respect to tasks on `stream`; copying earlier would race
     //    with the kernel and read uninitialized device memory
     if (stream != nullptr) {
@@ -215,14 +239,70 @@ extern "C" aclError _aclrandStatelessRandomUniformV2(
         }
     }
 
-    // 8. Copy result back to host
+    // 7. Copy result back to host
     if (aclrtMemcpy(output, outputSize, devOut, outputSize, ACL_MEMCPY_DEVICE_TO_HOST) != ACL_SUCCESS) {
         aclrtFree(devOut);
         return ACL_ERROR;
     }
 
-    // 9. Free device memory
+    // 8. Free device memory
     aclrtFree(devOut);
 
+    return ACL_SUCCESS;
+}
+
+extern "C" aclError _aclrandStatelessRandomUniformV2CounterUsage(uint64_t n, aclDataType dtype, uint64_t* counters)
+{
+    if (counters == nullptr || n == 0) {
+        return ACL_ERROR_INVALID_PARAM;
+    }
+
+    uint32_t dtypeSize = 0;
+    uint32_t tilingKey = 0;
+    aclError ret = GetOutputSizeInfo(n, dtype, dtypeSize, tilingKey);
+    if (ret != ACL_SUCCESS) {
+        return ret;
+    }
+
+    auto platform = platform_ascendc::PlatformAscendCManager::GetInstance();
+    if (platform == nullptr) {
+        return ACL_ERROR;
+    }
+    StatelessRandomUniformV2TilingData tilingData;
+    ret = CalcTilingData(n, dtypeSize, platform, tilingData);
+    if (ret != ACL_SUCCESS) {
+        return ret;
+    }
+
+    // 逐核复刻 kernel 的计数器消耗(Process/Skip): 每核先跳到 ceil(blockOffset / 4),
+    // 其后每个 UB tile 的生成数量向上补齐到整个向量 repeat, 再按 genCount / 4 推进。
+    // 取各核触达的最大计数器位置 —— 补齐使尾 tile 的消耗可能超过 ceil(n / 4),
+    // 调用方按此值推进 offset 才能保证相邻调用的序列互不重叠。
+    uint64_t maxCounterEnd = 0;
+    for (uint32_t blockIdx = 0; blockIdx < tilingData.blockNum; ++blockIdx) {
+        uint64_t blockOffset = static_cast<uint64_t>(tilingData.blockTilingSize) * blockIdx;
+        uint64_t counterBase = CeilDiv(blockOffset, static_cast<uint64_t>(PHILOX_RESULT_ELEMENT_CNT));
+        uint32_t currBlockTilingSize =
+            (blockIdx == tilingData.blockNum - 1) ? tilingData.tailBlockTilingSize : tilingData.blockTilingSize;
+        uint32_t ubTilingSize = std::min(tilingData.ubTilingSize, currBlockTilingSize);
+        if (ubTilingSize == 0) {
+            return ACL_ERROR;
+        }
+        uint32_t ubLoopCnt = CeilDiv(currBlockTilingSize, ubTilingSize);
+        uint64_t used = 0;
+        for (uint32_t idx = 0; idx < ubLoopCnt; ++idx) {
+            uint32_t currUbTilingSize = ubTilingSize;
+            if ((idx == ubLoopCnt - 1) && (currBlockTilingSize % ubTilingSize != 0)) {
+                currUbTilingSize = currBlockTilingSize % ubTilingSize;
+            }
+            uint64_t genCount =
+                CeilDiv(static_cast<uint64_t>(currUbTilingSize), static_cast<uint64_t>(PHILOX_GEN_ALIGN_ELEMENTS)) *
+                PHILOX_GEN_ALIGN_ELEMENTS;
+            used += genCount / PHILOX_RESULT_ELEMENT_CNT;
+        }
+        maxCounterEnd = std::max(maxCounterEnd, counterBase + used);
+    }
+
+    *counters = maxCounterEnd;
     return ACL_SUCCESS;
 }

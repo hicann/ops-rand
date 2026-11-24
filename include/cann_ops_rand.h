@@ -151,10 +151,13 @@ ACLRAND_API aclrandStatus_t aclrandSetGeneratorSeed(aclrandGenerator_t generator
 /**
  * @brief Set generator offset
  *
- * Sets the starting offset in the random number sequence.
+ * Sets the current position in the random number sequence, in Philox counter
+ * units (each counter value yields 4 random numbers). Generation advances this
+ * position, so setting it back to a previous value replays that part of the
+ * sequence.
  *
  * @param[in] generator Generator handle.
- * @param[in] offset   Starting offset in the random sequence.
+ * @param[in] offset   Position in the random sequence, in Philox counter units.
  *
  * @return ACLRAND_STATUS_SUCCESS on success, ACLRAND_STATUS_NOT_INITIALIZED if generator is NULL.
  */
@@ -187,6 +190,13 @@ ACLRAND_API aclrandStatus_t aclrandDestroyGenerator(aclrandGenerator_t generator
  * @brief Generate uniform random numbers
  *
  * Generates uniformly distributed random numbers in the range [0, 1).
+ *
+ * The generator is a stateful random stream: on success its offset advances past
+ * the counter values consumed by this call, so consecutive calls keep consuming
+ * the sequence instead of re-emitting it. To reproduce a sequence, set the seed
+ * and offset explicitly before generating. The advance can exceed n / 4 counter
+ * values because generation is padded per core, so the offset after a call is an
+ * implementation detail; do not rely on a specific value.
  *
  * @param[in]  generator Generator handle.
  * @param[out] output    Output array (host memory) to store random numbers.

@@ -143,7 +143,21 @@ aclrandStatus_t aclrandGenerateUniform(aclrandGenerator_t generator, float *outp
             return ACLRAND_STATUS_TYPE_ERROR;
     }
 
-    return toAclrandStatus(ret);
+    if (ret != ACL_SUCCESS) {
+        return toAclrandStatus(ret);
+    }
+
+    // Generator 是有状态随机流: 成功生成后必须把 offset 推进本次消耗的 Philox 计数器数,
+    // 否则下一次同长度调用会从同一位置重放同一段序列。推进量由算子侧按自身 tiling 给出
+    // (不是 ceil(n / 4) —— 每核尾 tile 的生成数量会补齐到整个向量 repeat 后才推进计数器)。
+    uint64_t consumed = 0;
+    aclError usageRet = _aclrandStatelessRandomUniformV2CounterUsage(n, ACL_FLOAT, &consumed);
+    if (usageRet != ACL_SUCCESS) {
+        return toAclrandStatus(usageRet);
+    }
+    g->offset += consumed;
+
+    return ACLRAND_STATUS_SUCCESS;
 }
 
 aclrandStatus_t aclrandGetVersion(size_t* version) {
